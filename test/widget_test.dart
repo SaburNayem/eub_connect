@@ -21,4 +21,21 @@ void main() {
     expect(find.text('Student ID'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
   });
+
+  testWidgets('opens the static university workspace', (tester) async {
+    await tester.pumpWidget(const EubConnectApp());
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Register'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Student workspace'), findsOneWidget);
+    expect(find.text('Attendance'), findsWidgets);
+    expect(find.text('Role Modules'), findsOneWidget);
+
+    await tester.tap(find.text('Teacher'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Teacher workspace'), findsOneWidget);
+    expect(find.text('Teacher Portal'), findsWidgets);
+  });
 }

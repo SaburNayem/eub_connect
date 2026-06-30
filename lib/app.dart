@@ -1,16 +1,21 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
-import 'package:eub_connect/feature/auth/screen/auth_screen.dart';
+import 'package:eub_connect/core/routes/app_pages.dart';
+import 'package:eub_connect/core/routes/app_routes.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class EubConnectApp extends StatelessWidget {
   const EubConnectApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'EUB Connect',
+      initialRoute: AppRoutes.auth,
+      getPages: AppPages.pages,
       theme: ThemeData(
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary,
           primary: AppColors.primary,
@@ -56,7 +61,6 @@ class EubConnectApp extends StatelessWidget {
           style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
         ),
       ),
-      home: const AuthScreen(),
     );
   }
 }

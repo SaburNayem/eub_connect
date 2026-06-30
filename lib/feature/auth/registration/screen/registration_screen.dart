@@ -5,7 +5,9 @@ import 'package:eub_connect/feature/auth/widget/auth_text_field.dart';
 import 'package:flutter/material.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  const RegistrationScreen({super.key});
+  const RegistrationScreen({this.onAuthenticated, super.key});
+
+  final VoidCallback? onAuthenticated;
 
   @override
   State<RegistrationScreen> createState() => _RegistrationScreenState();
@@ -21,6 +23,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   void _register() {
+    if (widget.onAuthenticated != null) {
+      widget.onAuthenticated!();
+      return;
+    }
+
     final registrationData = _controller.registrationData;
 
     ScaffoldMessenger.of(context).showSnackBar(

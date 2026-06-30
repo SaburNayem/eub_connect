@@ -4,7 +4,9 @@ import 'package:eub_connect/feature/auth/widget/auth_text_field.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({this.onAuthenticated, super.key});
+
+  final VoidCallback? onAuthenticated;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,6 +22,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() {
+    if (widget.onAuthenticated != null) {
+      widget.onAuthenticated!();
+      return;
+    }
+
     final loginData = _controller.loginData;
 
     ScaffoldMessenger.of(

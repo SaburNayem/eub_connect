@@ -1,8 +1,10 @@
+import 'package:eub_connect/core/routes/app_routes.dart';
 import 'package:eub_connect/feature/auth/login/screen/login_screen.dart';
 import 'package:eub_connect/feature/auth/registration/screen/registration_screen.dart';
 import 'package:eub_connect/feature/auth/widget/auth_switcher.dart';
 import 'package:eub_connect/feature/auth/widget/brand_header.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -13,6 +15,10 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _showRegister = true;
+
+  void _openStaticApp() {
+    Get.offAllNamed(AppRoutes.home);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,8 +46,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
                     child: _showRegister
-                        ? const RegistrationScreen(key: ValueKey('register'))
-                        : const LoginScreen(key: ValueKey('login')),
+                        ? RegistrationScreen(
+                            key: const ValueKey('register'),
+                            onAuthenticated: _openStaticApp,
+                          )
+                        : LoginScreen(
+                            key: const ValueKey('login'),
+                            onAuthenticated: _openStaticApp,
+                          ),
                   ),
                 ],
               ),
