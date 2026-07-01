@@ -1,0 +1,3 @@
+class SystemActivityController {
+  const SystemActivityController();
+}

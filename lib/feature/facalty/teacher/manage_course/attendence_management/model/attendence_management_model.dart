@@ -1,0 +1,3 @@
+class AttendenceManagementModel {
+  const AttendenceManagementModel();
+}

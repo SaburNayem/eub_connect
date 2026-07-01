@@ -1,0 +1,3 @@
+class DepertmentManagementController {
+  const DepertmentManagementController();
+}

@@ -1,0 +1,3 @@
+class LectureMaterialsModel {
+  const LectureMaterialsModel();
+}

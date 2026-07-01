@@ -1,0 +1,3 @@
+class DepertmentFacaltyInfoController {
+  const DepertmentFacaltyInfoController();
+}

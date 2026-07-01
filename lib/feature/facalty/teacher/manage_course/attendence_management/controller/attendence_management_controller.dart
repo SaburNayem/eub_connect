@@ -1,0 +1,3 @@
+class AttendenceManagementController {
+  const AttendenceManagementController();
+}

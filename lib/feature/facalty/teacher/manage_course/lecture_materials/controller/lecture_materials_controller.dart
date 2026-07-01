@@ -1,0 +1,3 @@
+class LectureMaterialsController {
+  const LectureMaterialsController();
+}

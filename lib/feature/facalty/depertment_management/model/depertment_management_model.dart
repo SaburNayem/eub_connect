@@ -1,0 +1,3 @@
+class DepertmentManagementModel {
+  const DepertmentManagementModel();
+}

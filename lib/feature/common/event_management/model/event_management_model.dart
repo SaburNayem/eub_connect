@@ -1,0 +1,3 @@
+class EventManagementModel {
+  const EventManagementModel();
+}

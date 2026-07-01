@@ -1,0 +1,3 @@
+class AssignmentAndQuizController {
+  const AssignmentAndQuizController();
+}

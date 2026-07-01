@@ -1,0 +1,3 @@
+class UserRoleManagementController {
+  const UserRoleManagementController();
+}
