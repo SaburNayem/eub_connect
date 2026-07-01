@@ -1,0 +1,3 @@
+class UserRoleManagementModel {
+  const UserRoleManagementModel();
+}

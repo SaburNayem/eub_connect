@@ -1,0 +1,3 @@
+class RoutineManagementModel {
+  const RoutineManagementModel();
+}

@@ -1,0 +1,3 @@
+class MarksResultModel {
+  const MarksResultModel();
+}

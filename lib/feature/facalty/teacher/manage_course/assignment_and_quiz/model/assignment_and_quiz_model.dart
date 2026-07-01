@@ -1,0 +1,3 @@
+class AssignmentAndQuizModel {
+  const AssignmentAndQuizModel();
+}

@@ -1,0 +1,3 @@
+class RoutineManagementController {
+  const RoutineManagementController();
+}

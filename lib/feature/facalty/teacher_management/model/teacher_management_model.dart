@@ -1,0 +1,3 @@
+class TeacherManagementModel {
+  const TeacherManagementModel();
+}

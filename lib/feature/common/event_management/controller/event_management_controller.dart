@@ -1,0 +1,3 @@
+class EventManagementController {
+  const EventManagementController();
+}

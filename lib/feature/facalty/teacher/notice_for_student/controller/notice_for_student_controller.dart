@@ -1,0 +1,3 @@
+class NoticeForStudentController {
+  const NoticeForStudentController();
+}

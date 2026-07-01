@@ -1,0 +1,3 @@
+class NoticeModel {
+  const NoticeModel();
+}

@@ -1,0 +1,3 @@
+class AdminFacaltyController {
+  const AdminFacaltyController();
+}

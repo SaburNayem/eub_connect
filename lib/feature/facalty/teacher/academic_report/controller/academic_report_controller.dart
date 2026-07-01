@@ -1,0 +1,3 @@
+class AcademicReportController {
+  const AcademicReportController();
+}

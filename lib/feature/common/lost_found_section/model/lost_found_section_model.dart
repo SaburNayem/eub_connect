@@ -1,0 +1,3 @@
+class LostFoundSectionModel {
+  const LostFoundSectionModel();
+}

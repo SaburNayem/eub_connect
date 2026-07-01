@@ -1,0 +1,3 @@
+class AcademicCalanderManagementModel {
+  const AcademicCalanderManagementModel();
+}

@@ -1,0 +1,3 @@
+class LostFoundSectionController {
+  const LostFoundSectionController();
+}

@@ -1,0 +1,3 @@
+class DepertmentFacaltyInfoModel {
+  const DepertmentFacaltyInfoModel();
+}

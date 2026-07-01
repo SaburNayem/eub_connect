@@ -1,0 +1,3 @@
+class StudentManagementModel {
+  const StudentManagementModel();
+}

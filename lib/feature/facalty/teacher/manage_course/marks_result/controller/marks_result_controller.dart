@@ -1,0 +1,3 @@
+class MarksResultController {
+  const MarksResultController();
+}

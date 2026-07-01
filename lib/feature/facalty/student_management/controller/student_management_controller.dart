@@ -1,0 +1,3 @@
+class StudentManagementController {
+  const StudentManagementController();
+}
