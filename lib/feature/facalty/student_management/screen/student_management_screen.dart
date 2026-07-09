@@ -1,4 +1,4 @@
-﻿import 'package:eub_connect/feature/facalty/student_management/controller/student_management_controller.dart';
+import 'package:eub_connect/feature/facalty/student_management/controller/student_management_controller.dart';
 import 'package:eub_connect/feature/home/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 

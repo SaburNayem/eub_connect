@@ -1,4 +1,4 @@
-﻿import 'package:eub_connect/feature/common/settings/model/settings_model.dart';
+import 'package:eub_connect/feature/common/settings/model/settings_model.dart';
 import 'package:get/get.dart';
 
 class SettingsController extends GetxController {

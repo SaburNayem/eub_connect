@@ -1,4 +1,4 @@
-﻿import 'package:eub_connect/feature/common/depertment_facalty_info/model/depertment_facalty_info_model.dart';
+import 'package:eub_connect/feature/common/depertment_facalty_info/model/depertment_facalty_info_model.dart';
 import 'package:get/get.dart';
 
 class DepertmentFacaltyInfoController extends GetxController {
