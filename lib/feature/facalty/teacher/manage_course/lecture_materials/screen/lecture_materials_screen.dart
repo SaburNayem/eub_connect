@@ -1,3 +1,5 @@
+import 'package:eub_connect/feature/facalty/teacher/manage_course/lecture_materials/controller/lecture_materials_controller.dart';
+import 'package:eub_connect/feature/home/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 
 class LectureMaterialsScreen extends StatelessWidget {
@@ -5,8 +7,9 @@ class LectureMaterialsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Lecture Materials')),
+    return FeatureModuleControllerScreen<LectureMaterialsController>(
+      create: LectureMaterialsController.new,
+      featureBuilder: (controller) => controller.model.value.feature,
     );
   }
 }

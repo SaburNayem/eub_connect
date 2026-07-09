@@ -1,3 +1,5 @@
+import 'package:eub_connect/feature/common/settings/controller/settings_controller.dart';
+import 'package:eub_connect/feature/home/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -5,8 +7,9 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Settings')),
+    return FeatureModuleControllerScreen<SettingsController>(
+      create: SettingsController.new,
+      featureBuilder: (controller) => controller.model.value.feature,
     );
   }
 }

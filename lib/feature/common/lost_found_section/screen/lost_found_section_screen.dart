@@ -1,3 +1,5 @@
+import 'package:eub_connect/feature/common/lost_found_section/controller/lost_found_section_controller.dart';
+import 'package:eub_connect/feature/home/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 
 class LostFoundSectionScreen extends StatelessWidget {
@@ -5,8 +7,9 @@ class LostFoundSectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Lost Found Section')),
+    return FeatureModuleControllerScreen<LostFoundSectionController>(
+      create: LostFoundSectionController.new,
+      featureBuilder: (controller) => controller.model.value.feature,
     );
   }
 }

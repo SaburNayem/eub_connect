@@ -1,6 +1,43 @@
 class AppRoutes {
   const AppRoutes._();
 
+  static const splash = '/splash';
   static const auth = '/auth';
   static const home = '/home';
+  static const departments = '/departments';
+  static const events = '/events';
+  static const lostFound = '/lost-found';
+  static const notice = '/notice';
+  static const settings = '/settings';
+  static const academicCalendar = '/academic-calendar';
+  static const adminFaculty = '/admin-faculty';
+  static const departmentManagement = '/department-management';
+  static const payment = '/payment';
+  static const resultReport = '/result-report';
+  static const routineManagement = '/routine-management';
+  static const studentManagement = '/student-management';
+  static const systemActivity = '/system-activity';
+  static const teacherManagement = '/teacher-management';
+  static const userRoleManagement = '/user-role-management';
+  static const teacherDashboard = '/teacher-dashboard';
+  static const teacherAcademicReport = '/teacher-academic-report';
+  static const assignmentQuiz = '/assignment-quiz';
+  static const attendanceManagement = '/attendance-management';
+  static const lectureMaterials = '/lecture-materials';
+  static const marksResult = '/marks-result';
+  static const noticeForStudent = '/notice-for-student';
+  static const studentAssignments = '/student-assignments';
+  static const studentAttendance = '/student-attendance';
+  static const studentClassRoutine = '/student-class-routine';
+  static const studentClubCommunity = '/student-club-community';
+  static const studentEvents = '/student-events';
+  static const studentExamResults = '/student-exam-results';
+  static const studentPaymentHistory = '/student-payment-history';
+  static const studentProfile = '/student-profile';
+  static const studentQuizPractice = '/student-quiz-practice';
+  static const studentScholarships = '/student-scholarships';
+  static const studentSemesterCourses = '/student-semester-courses';
+  static const studentDiscussionForum = '/student-discussion-forum';
+  static const studentSupport = '/student-support';
+  static const studentTuitionFee = '/student-tuition-fee';
 }

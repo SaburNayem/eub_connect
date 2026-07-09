@@ -128,6 +128,145 @@ class DashboardProfile {
   final List<StaticRecord> schedule;
 }
 
+class FeatureModuleModel {
+  const FeatureModuleModel({
+    required this.title,
+    this.category = 'Module',
+    this.description,
+    this.icon,
+    this.accent = const Color(0xFF2A2D7E),
+    this.access = allPortalRoles,
+    this.metrics,
+    this.actions,
+    this.records,
+  });
+
+  final String title;
+  final String category;
+  final String? description;
+  final IconData? icon;
+  final Color accent;
+  final List<PortalRole> access;
+  final List<StaticMetric>? metrics;
+  final List<String>? actions;
+  final List<StaticRecord>? records;
+
+  StaticFeature get feature {
+    return moduleFeature(
+      title: title,
+      category: category,
+      description: description,
+      icon: icon,
+      accent: accent,
+      access: access,
+      metrics: metrics,
+      actions: actions,
+      records: records,
+    );
+  }
+}
+
+StaticFeature moduleFeature({
+  required String title,
+  String category = 'Module',
+  String? description,
+  IconData? icon,
+  Color accent = const Color(0xFF2A2D7E),
+  List<PortalRole> access = allPortalRoles,
+  List<StaticMetric>? metrics,
+  List<String>? actions,
+  List<StaticRecord>? records,
+}) {
+  for (final feature in staticFeatures) {
+    if (feature.title == title) {
+      return feature;
+    }
+  }
+
+  final moduleIcon = icon ?? moduleFallbackIcon(title);
+
+  return StaticFeature(
+    title: title,
+    category: category,
+    description:
+        description ??
+        'Manage $title records, actions, reports, and status for EUB Connect.',
+    icon: moduleIcon,
+    accent: accent,
+    access: access,
+    metrics:
+        metrics ??
+        const [
+          StaticMetric(
+            label: 'Records',
+            value: '24',
+            note: 'Static entries',
+            icon: Icons.folder_copy_outlined,
+          ),
+          StaticMetric(
+            label: 'Pending',
+            value: '6',
+            note: 'Needs review',
+            icon: Icons.pending_actions_outlined,
+          ),
+          StaticMetric(
+            label: 'Complete',
+            value: '18',
+            note: 'This semester',
+            icon: Icons.task_alt_outlined,
+          ),
+        ],
+    actions: actions ?? const ['Create record', 'Review list', 'Export report'],
+    records:
+        records ??
+        [
+          StaticRecord(
+            title: '$title overview',
+            subtitle: 'Core information is ready for review',
+            meta: 'EUB Connect',
+            status: 'Ready',
+            icon: moduleIcon,
+          ),
+          const StaticRecord(
+            title: 'Pending approval',
+            subtitle: 'Faculty and admin can review this item',
+            meta: 'Today',
+            status: 'Pending',
+            icon: Icons.pending_actions_outlined,
+          ),
+          const StaticRecord(
+            title: 'Report generated',
+            subtitle: 'Summary export is available in the demo',
+            meta: 'Static demo',
+            status: 'Complete',
+            icon: Icons.summarize_outlined,
+          ),
+        ],
+  );
+}
+
+IconData moduleFallbackIcon(String title) {
+  final lower = title.toLowerCase();
+  if (lower.contains('teacher')) return Icons.co_present_outlined;
+  if (lower.contains('student')) return Icons.person_outline;
+  if (lower.contains('payment') || lower.contains('fee')) {
+    return Icons.payments_outlined;
+  }
+  if (lower.contains('notice')) return Icons.campaign_outlined;
+  if (lower.contains('routine') || lower.contains('calendar')) {
+    return Icons.calendar_month_outlined;
+  }
+  if (lower.contains('attendance')) return Icons.how_to_reg_outlined;
+  if (lower.contains('result') || lower.contains('report')) {
+    return Icons.analytics_outlined;
+  }
+  if (lower.contains('department')) return Icons.account_tree_outlined;
+  if (lower.contains('role')) return Icons.manage_accounts_outlined;
+  if (lower.contains('event')) return Icons.event_outlined;
+  if (lower.contains('setting')) return Icons.settings_outlined;
+  return Icons.dashboard_customize_outlined;
+}
+
 const allPortalRoles = [
   PortalRole.student,
   PortalRole.teacher,
@@ -779,6 +918,165 @@ const staticFeatures = [
     ],
   ),
   StaticFeature(
+    title: 'Department Management',
+    category: 'Faculty',
+    description:
+        'Create departments, assign heads, manage programs, and review faculty-level department status.',
+    icon: Icons.account_tree_outlined,
+    accent: Color(0xFF1D4ED8),
+    access: facultyAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Departments',
+        value: '9',
+        note: 'Across 4 faculties',
+        icon: Icons.account_tree_outlined,
+      ),
+      StaticMetric(
+        label: 'Programs',
+        value: '31',
+        note: 'Undergraduate and graduate',
+        icon: Icons.school_outlined,
+      ),
+      StaticMetric(
+        label: 'Head updates',
+        value: '3',
+        note: 'Awaiting dean approval',
+        icon: Icons.manage_accounts_outlined,
+      ),
+    ],
+    actions: ['Add department', 'Assign head', 'Export program list'],
+    records: [
+      StaticRecord(
+        title: 'CSE program review',
+        subtitle: 'New AI lab course attached to the curriculum map',
+        meta: 'Faculty of Engineering',
+        status: 'Review',
+        icon: Icons.memory_outlined,
+      ),
+      StaticRecord(
+        title: 'Textile head assignment',
+        subtitle: 'Shortlisted faculty profile sent for dean approval',
+        meta: 'Pending approval',
+        status: 'Pending',
+        icon: Icons.approval_outlined,
+      ),
+      StaticRecord(
+        title: 'Business program archive',
+        subtitle: 'Old concentration list moved to inactive catalog',
+        meta: 'Summer 2026',
+        status: 'Complete',
+        icon: Icons.archive_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
+    title: 'Teacher Management',
+    category: 'Faculty',
+    description:
+        'Teacher profiles, course load, designation, department assignment, and onboarding workflow.',
+    icon: Icons.co_present_outlined,
+    accent: Color(0xFF0F766E),
+    access: facultyAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Active teachers',
+        value: '126',
+        note: '8 newly assigned',
+        icon: Icons.badge_outlined,
+      ),
+      StaticMetric(
+        label: 'Course loads',
+        value: '342',
+        note: 'Current semester',
+        icon: Icons.menu_book_outlined,
+      ),
+      StaticMetric(
+        label: 'Pending profiles',
+        value: '11',
+        note: 'Documents to verify',
+        icon: Icons.fact_check_outlined,
+      ),
+    ],
+    actions: ['Add teacher', 'Assign course', 'Verify profile'],
+    records: [
+      StaticRecord(
+        title: 'Dr. Rahman assigned',
+        subtitle: 'CSE 410 Artificial Intelligence lecture and lab',
+        meta: '3 sections',
+        status: 'Active',
+        icon: Icons.co_present_outlined,
+      ),
+      StaticRecord(
+        title: 'Nusrat Jahan profile',
+        subtitle: 'Joining documents uploaded for HR verification',
+        meta: 'New faculty',
+        status: 'Review',
+        icon: Icons.description_outlined,
+      ),
+      StaticRecord(
+        title: 'Guest teacher contract',
+        subtitle: 'Business analytics short course contract prepared',
+        meta: 'Summer 2026',
+        status: 'Draft',
+        icon: Icons.edit_note_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
+    title: 'Student Management',
+    category: 'Faculty',
+    description:
+        'Student records, enrollment status, advising notes, section assignment, and academic profile review.',
+    icon: Icons.people_alt_outlined,
+    accent: Color(0xFF2563EB),
+    access: facultyAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Active students',
+        value: '8,432',
+        note: 'All faculties',
+        icon: Icons.people_alt_outlined,
+      ),
+      StaticMetric(
+        label: 'New admissions',
+        value: '312',
+        note: 'Summer intake',
+        icon: Icons.person_add_alt_outlined,
+      ),
+      StaticMetric(
+        label: 'Advising queue',
+        value: '58',
+        note: 'Course registration',
+        icon: Icons.support_agent_outlined,
+      ),
+    ],
+    actions: ['Add student', 'Assign section', 'Review advising'],
+    records: [
+      StaticRecord(
+        title: 'CSE-2026-014',
+        subtitle: 'Section A confirmed with 18 credit hours',
+        meta: 'Registration complete',
+        status: 'Approved',
+        icon: Icons.fact_check_outlined,
+      ),
+      StaticRecord(
+        title: 'Probation review',
+        subtitle: 'Academic advisor note required before enrollment',
+        meta: '12 students',
+        status: 'Alert',
+        icon: Icons.warning_amber_outlined,
+      ),
+      StaticRecord(
+        title: 'Transfer credit batch',
+        subtitle: 'Registrar uploaded equivalency documents',
+        meta: '8 requests',
+        status: 'Review',
+        icon: Icons.folder_copy_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
     title: 'Events',
     category: 'Campus',
     description:
@@ -828,6 +1126,112 @@ const staticFeatures = [
         meta: 'Pending',
         status: 'Review',
         icon: Icons.code_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
+    title: 'Routine Management',
+    category: 'Academic',
+    description:
+        'Create class routines, assign rooms, resolve teacher conflicts, and publish semester schedules.',
+    icon: Icons.calendar_month_outlined,
+    accent: Color(0xFF7C2D12),
+    access: allPortalRoles,
+    metrics: [
+      StaticMetric(
+        label: 'Published slots',
+        value: '214',
+        note: 'Current semester',
+        icon: Icons.event_available_outlined,
+      ),
+      StaticMetric(
+        label: 'Conflicts',
+        value: '5',
+        note: 'Room and teacher overlap',
+        icon: Icons.warning_amber_outlined,
+      ),
+      StaticMetric(
+        label: 'Lab rooms',
+        value: '18',
+        note: 'Allocated',
+        icon: Icons.computer_outlined,
+      ),
+    ],
+    actions: ['Create routine', 'Resolve conflict', 'Publish schedule'],
+    records: [
+      StaticRecord(
+        title: 'CSE Section A routine',
+        subtitle: 'Morning classes moved to Room 604',
+        meta: 'Effective Jul 12',
+        status: 'Published',
+        icon: Icons.schedule_outlined,
+      ),
+      StaticRecord(
+        title: 'AI Lab conflict',
+        subtitle: 'Teacher and lab room overlap detected',
+        meta: 'Needs coordinator',
+        status: 'Alert',
+        icon: Icons.warning_amber_outlined,
+      ),
+      StaticRecord(
+        title: 'Final exam draft',
+        subtitle: 'Routine prepared for faculty review',
+        meta: 'Summer 2026',
+        status: 'Draft',
+        icon: Icons.edit_calendar_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
+    title: 'Class Routine',
+    category: 'Academic',
+    description:
+        'Student class routine with rooms, teachers, labs, breaks, and current-day schedule summary.',
+    icon: Icons.schedule_outlined,
+    accent: Color(0xFF0284C7),
+    access: studentAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Today classes',
+        value: '4',
+        note: '2 theory, 2 lab',
+        icon: Icons.event_available_outlined,
+      ),
+      StaticMetric(
+        label: 'Weekly hours',
+        value: '18',
+        note: 'Credit schedule',
+        icon: Icons.timer_outlined,
+      ),
+      StaticMetric(
+        label: 'Room changes',
+        value: '1',
+        note: 'This week',
+        icon: Icons.meeting_room_outlined,
+      ),
+    ],
+    actions: ['View today', 'Download routine', 'Set reminder'],
+    records: [
+      StaticRecord(
+        title: 'Software Engineering',
+        subtitle: 'Room 604 with Nusrat Jahan',
+        meta: '09:00 AM',
+        status: 'Class',
+        icon: Icons.menu_book_outlined,
+      ),
+      StaticRecord(
+        title: 'Artificial Intelligence Lab',
+        subtitle: 'Lab 3 with Dr. Karim',
+        meta: '12:30 PM',
+        status: 'Lab',
+        icon: Icons.computer_outlined,
+      ),
+      StaticRecord(
+        title: 'Numerical Methods',
+        subtitle: 'Room 302 with Dr. Alam',
+        meta: '03:00 PM',
+        status: 'Class',
+        icon: Icons.calculate_outlined,
       ),
     ],
   ),
@@ -1093,6 +1497,218 @@ const staticFeatures = [
         meta: 'Yesterday',
         status: 'Draft',
         icon: Icons.edit_note_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
+    title: 'Student Notices',
+    category: 'Teacher',
+    description:
+        'Teacher notice publishing for class changes, assignment reminders, exam updates, and student alerts.',
+    icon: Icons.campaign_outlined,
+    accent: Color(0xFFB45309),
+    access: teacherAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Published',
+        value: '21',
+        note: 'This semester',
+        icon: Icons.campaign_outlined,
+      ),
+      StaticMetric(
+        label: 'Scheduled',
+        value: '4',
+        note: 'Next 7 days',
+        icon: Icons.schedule_outlined,
+      ),
+      StaticMetric(
+        label: 'Recipients',
+        value: '382',
+        note: 'Active students',
+        icon: Icons.groups_outlined,
+      ),
+    ],
+    actions: ['Create notice', 'Schedule notice', 'Send reminder'],
+    records: [
+      StaticRecord(
+        title: 'CSE 303 room changed',
+        subtitle: 'Section B moved to Room 704 for the next class',
+        meta: 'Sent to 48 students',
+        status: 'Published',
+        icon: Icons.notifications_active_outlined,
+      ),
+      StaticRecord(
+        title: 'Quiz preparation notice',
+        subtitle: 'Topic list attached for Artificial Intelligence',
+        meta: 'Scheduled 08:00 PM',
+        status: 'Ready',
+        icon: Icons.quiz_outlined,
+      ),
+      StaticRecord(
+        title: 'Assignment reminder',
+        subtitle: 'Data Mining report submission window closes tonight',
+        meta: 'Urgent',
+        status: 'Urgent',
+        icon: Icons.notification_important_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
+    title: 'Lecture Materials',
+    category: 'Teacher',
+    description:
+        'Upload slides, class notes, lab files, reading lists, and course resources for students.',
+    icon: Icons.folder_copy_outlined,
+    accent: Color(0xFF4338CA),
+    access: teacherAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Materials',
+        value: '84',
+        note: 'Slides, PDFs, code',
+        icon: Icons.folder_copy_outlined,
+      ),
+      StaticMetric(
+        label: 'Downloads',
+        value: '1.4K',
+        note: 'Last 30 days',
+        icon: Icons.file_download_outlined,
+      ),
+      StaticMetric(
+        label: 'Drafts',
+        value: '5',
+        note: 'Not published',
+        icon: Icons.edit_note_outlined,
+      ),
+    ],
+    actions: ['Upload material', 'Publish folder', 'Archive file'],
+    records: [
+      StaticRecord(
+        title: 'Search algorithms slides',
+        subtitle: 'Week 5 lecture deck for CSE 410',
+        meta: 'PDF, 2.4 MB',
+        status: 'Published',
+        icon: Icons.picture_as_pdf_outlined,
+      ),
+      StaticRecord(
+        title: 'Flutter starter project',
+        subtitle: 'Mobile App Development lab resources',
+        meta: 'ZIP, 8 files',
+        status: 'Ready',
+        icon: Icons.code_outlined,
+      ),
+      StaticRecord(
+        title: 'Database normalization notes',
+        subtitle: 'Draft reading material awaiting review',
+        meta: 'Week 4',
+        status: 'Draft',
+        icon: Icons.description_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
+    title: 'Academic Report',
+    category: 'Teacher',
+    description:
+        'Course performance reports, weak-student lists, section summaries, and advisor-ready analytics.',
+    icon: Icons.analytics_outlined,
+    accent: Color(0xFF0369A1),
+    access: teacherAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Reports',
+        value: '12',
+        note: 'Generated',
+        icon: Icons.analytics_outlined,
+      ),
+      StaticMetric(
+        label: 'At risk',
+        value: '18',
+        note: 'Below target',
+        icon: Icons.warning_amber_outlined,
+      ),
+      StaticMetric(
+        label: 'Sections',
+        value: '5',
+        note: 'Current courses',
+        icon: Icons.class_outlined,
+      ),
+    ],
+    actions: ['Generate report', 'Filter section', 'Export PDF'],
+    records: [
+      StaticRecord(
+        title: 'CSE 410 midterm report',
+        subtitle: 'Average mark 78 with 6 students below target',
+        meta: 'Section A',
+        status: 'Ready',
+        icon: Icons.leaderboard_outlined,
+      ),
+      StaticRecord(
+        title: 'Attendance-risk summary',
+        subtitle: 'Advisor follow-up recommended for 12 students',
+        meta: 'All courses',
+        status: 'Alert',
+        icon: Icons.how_to_reg_outlined,
+      ),
+      StaticRecord(
+        title: 'Course outcome map',
+        subtitle: 'CO1 and CO2 achievement uploaded',
+        meta: 'Spring 2026',
+        status: 'Complete',
+        icon: Icons.task_alt_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
+    title: 'Marks Result',
+    category: 'Teacher',
+    description:
+        'Enter marks, review grade sheets, publish results, and handle flagged student result corrections.',
+    icon: Icons.leaderboard_outlined,
+    accent: Color(0xFF059669),
+    access: teacherAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Marks entered',
+        value: '286',
+        note: 'Across sections',
+        icon: Icons.edit_note_outlined,
+      ),
+      StaticMetric(
+        label: 'Pending review',
+        value: '31',
+        note: 'Manual checks',
+        icon: Icons.rate_review_outlined,
+      ),
+      StaticMetric(
+        label: 'Published',
+        value: '9',
+        note: 'Grade sheets',
+        icon: Icons.verified_outlined,
+      ),
+    ],
+    actions: ['Enter marks', 'Review sheet', 'Publish result'],
+    records: [
+      StaticRecord(
+        title: 'CSE 410 Quiz 2',
+        subtitle: 'Manual review completed for short answers',
+        meta: '24 scripts',
+        status: 'Complete',
+        icon: Icons.quiz_outlined,
+      ),
+      StaticRecord(
+        title: 'CSE 303 lab marks',
+        subtitle: 'Two roll numbers flagged for missing submission',
+        meta: 'Section B',
+        status: 'Flagged',
+        icon: Icons.report_problem_outlined,
+      ),
+      StaticRecord(
+        title: 'MAT 301 grade sheet',
+        subtitle: 'Final marks ready for faculty approval',
+        meta: 'Spring 2026',
+        status: 'Ready',
+        icon: Icons.fact_check_outlined,
       ),
     ],
   ),
@@ -1521,6 +2137,59 @@ const staticFeatures = [
     ],
   ),
   StaticFeature(
+    title: 'System Activity',
+    category: 'Administration',
+    description:
+        'System logs, login activity, role changes, backup status, moderation actions, and audit events.',
+    icon: Icons.history_outlined,
+    accent: Color(0xFF6D28D9),
+    access: adminAccess,
+    metrics: [
+      StaticMetric(
+        label: 'Logs',
+        value: '1.2K',
+        note: 'Last 24 hours',
+        icon: Icons.history_outlined,
+      ),
+      StaticMetric(
+        label: 'Security alerts',
+        value: '7',
+        note: 'Needs review',
+        icon: Icons.security_outlined,
+      ),
+      StaticMetric(
+        label: 'Backups',
+        value: '3',
+        note: 'Healthy today',
+        icon: Icons.backup_outlined,
+      ),
+    ],
+    actions: ['View logs', 'Audit roles', 'Export activity'],
+    records: [
+      StaticRecord(
+        title: 'Bulk notice publish',
+        subtitle: 'Admin pushed emergency maintenance notice',
+        meta: '1 hour ago',
+        status: 'Logged',
+        icon: Icons.campaign_outlined,
+      ),
+      StaticRecord(
+        title: 'Role permission change',
+        subtitle: 'Temporary finance viewer access granted',
+        meta: 'Request #221',
+        status: 'Security',
+        icon: Icons.admin_panel_settings_outlined,
+      ),
+      StaticRecord(
+        title: 'Nightly backup check',
+        subtitle: 'Demo database snapshot completed successfully',
+        meta: '06:00 PM',
+        status: 'Healthy',
+        icon: Icons.backup_outlined,
+      ),
+    ],
+  ),
+  StaticFeature(
     title: 'Notifications',
     category: 'Settings',
     description:
@@ -1630,52 +2299,52 @@ const staticFeatures = [
     title: 'Settings',
     category: 'Settings',
     description:
-        'Theme, language, privacy, security, notification preferences, and logout controls.',
+        'Notification preferences, delivery channels, quiet hours, and alert categories.',
     icon: Icons.settings_outlined,
     accent: Color(0xFF475569),
     access: allPortalRoles,
     metrics: [
       StaticMetric(
-        label: 'Theme',
-        value: 'Light',
-        note: 'Static demo',
-        icon: Icons.light_mode_outlined,
+        label: 'App alerts',
+        value: 'On',
+        note: 'Campus and academic',
+        icon: Icons.notifications_active_outlined,
       ),
       StaticMetric(
-        label: 'Language',
-        value: 'English',
-        note: 'More planned',
-        icon: Icons.language_outlined,
+        label: 'Email digest',
+        value: 'Daily',
+        note: '08:00 PM',
+        icon: Icons.mark_email_read_outlined,
       ),
       StaticMetric(
-        label: 'Security',
-        value: 'Strong',
-        note: '2FA ready',
-        icon: Icons.security_outlined,
+        label: 'Quiet hours',
+        value: '10 PM',
+        note: 'Until 07:00 AM',
+        icon: Icons.notifications_paused_outlined,
       ),
     ],
-    actions: ['Change theme', 'Update language', 'Logout'],
+    actions: ['Toggle app alerts', 'Update email digest', 'Set quiet hours'],
     records: [
       StaticRecord(
-        title: 'Remember me',
-        subtitle: 'Stored in local session for demo',
-        meta: 'Enabled',
+        title: 'Assignment reminders',
+        subtitle: 'Deadline and submission alerts',
+        meta: 'App and email',
         status: 'On',
-        icon: Icons.save_outlined,
+        icon: Icons.assignment_late_outlined,
       ),
       StaticRecord(
-        title: 'Privacy mode',
-        subtitle: 'Hide phone number from public profile',
-        meta: 'Profile',
+        title: 'Payment alerts',
+        subtitle: 'Due, receipt, and clearance notifications',
+        meta: 'App, SMS, email',
         status: 'Enabled',
-        icon: Icons.privacy_tip_outlined,
+        icon: Icons.payments_outlined,
       ),
       StaticRecord(
-        title: 'Security check',
-        subtitle: 'Password changed 22 days ago',
-        meta: 'Account',
-        status: 'Healthy',
-        icon: Icons.verified_user_outlined,
+        title: 'Campus notice digest',
+        subtitle: 'Daily summary for university notices',
+        meta: '08:00 PM',
+        status: 'Scheduled',
+        icon: Icons.campaign_outlined,
       ),
     ],
   ),

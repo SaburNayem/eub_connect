@@ -6,15 +6,18 @@ import 'package:eub_connect/feature/auth/widget/brand_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+class AuthController extends GetxController {
+  final showRegister = false.obs;
 
-  @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  void setMode(bool value) {
+    showRegister.value = value;
+  }
 }
 
-class _AuthScreenState extends State<AuthScreen> {
-  bool _showRegister = true;
+class AuthScreen extends StatelessWidget {
+  AuthScreen({super.key});
+
+  final AuthController _controller = Get.put(AuthController());
 
   void _openStaticApp() {
     Get.offAllNamed(AppRoutes.home);
@@ -34,26 +37,28 @@ class _AuthScreenState extends State<AuthScreen> {
                 children: [
                   const BrandHeader(),
                   const SizedBox(height: 28),
-                  AuthSwitcher(
-                    showRegister: _showRegister,
-                    onChanged: (value) {
-                      setState(() {
-                        _showRegister = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 22),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: _showRegister
-                        ? RegistrationScreen(
-                            key: const ValueKey('register'),
-                            onAuthenticated: _openStaticApp,
-                          )
-                        : LoginScreen(
-                            key: const ValueKey('login'),
-                            onAuthenticated: _openStaticApp,
-                          ),
+                  Obx(
+                    () => Column(
+                      children: [
+                        AuthSwitcher(
+                          showRegister: _controller.showRegister.value,
+                          onChanged: _controller.setMode,
+                        ),
+                        const SizedBox(height: 22),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          child: _controller.showRegister.value
+                              ? RegistrationScreen(
+                                  key: const ValueKey('register'),
+                                  onAuthenticated: _openStaticApp,
+                                )
+                              : LoginScreen(
+                                  key: const ValueKey('login'),
+                                  onAuthenticated: _openStaticApp,
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

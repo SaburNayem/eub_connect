@@ -1,19 +1,33 @@
+import 'package:eub_connect/feature/auth/model/static_account.dart';
 import 'package:eub_connect/feature/auth/login/model/login_model.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-class LoginController {
-  final studentIdController = TextEditingController();
+class LoginController extends GetxController {
+  final formKey = GlobalKey<FormState>();
+  final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   LoginModel get loginData {
     return LoginModel(
-      studentId: studentIdController.text.trim(),
+      email: emailController.text.trim(),
       password: passwordController.text,
     );
   }
 
-  void dispose() {
-    studentIdController.dispose();
+  StaticAccount? authenticate() {
+    final data = loginData;
+    return findStaticAccount(email: data.email, password: data.password);
+  }
+
+  bool validate() {
+    return formKey.currentState?.validate() ?? false;
+  }
+
+  @override
+  void onClose() {
+    emailController.dispose();
     passwordController.dispose();
+    super.onClose();
   }
 }

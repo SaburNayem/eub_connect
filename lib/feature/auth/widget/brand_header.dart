@@ -36,7 +36,7 @@ class BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         const Text(
-          'Student registration and login',
+          'Role-based login and registration',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.textDark, fontSize: 15),
         ),

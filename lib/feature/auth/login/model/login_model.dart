@@ -1,6 +1,6 @@
 class LoginModel {
-  const LoginModel({required this.studentId, required this.password});
+  const LoginModel({required this.email, required this.password});
 
-  final String studentId;
+  final String email;
   final String password;
 }

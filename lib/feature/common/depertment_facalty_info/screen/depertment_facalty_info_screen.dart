@@ -1,3 +1,5 @@
+import 'package:eub_connect/feature/common/depertment_facalty_info/controller/depertment_facalty_info_controller.dart';
+import 'package:eub_connect/feature/home/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 
 class DepertmentFacaltyInfoScreen extends StatelessWidget {
@@ -5,8 +7,9 @@ class DepertmentFacaltyInfoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Depertment Facalty Info')),
+    return FeatureModuleControllerScreen<DepertmentFacaltyInfoController>(
+      create: DepertmentFacaltyInfoController.new,
+      featureBuilder: (controller) => controller.model.value.feature,
     );
   }
 }

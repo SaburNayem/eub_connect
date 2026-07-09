@@ -12,7 +12,7 @@ class EubConnectApp extends StatelessWidget {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'EUB Connect',
-      initialRoute: AppRoutes.auth,
+      initialRoute: AppRoutes.splash,
       getPages: AppPages.pages,
       theme: ThemeData(
         useMaterial3: true,

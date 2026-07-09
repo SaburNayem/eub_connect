@@ -23,16 +23,16 @@ class AuthSwitcher extends StatelessWidget {
         children: [
           Expanded(
             child: _SwitchButton(
-              label: 'Registration',
-              selected: showRegister,
-              onTap: () => onChanged(true),
+              label: 'Login',
+              selected: !showRegister,
+              onTap: () => onChanged(false),
             ),
           ),
           Expanded(
             child: _SwitchButton(
-              label: 'Login',
-              selected: !showRegister,
-              onTap: () => onChanged(false),
+              label: 'Registration',
+              selected: showRegister,
+              onTap: () => onChanged(true),
             ),
           ),
         ],

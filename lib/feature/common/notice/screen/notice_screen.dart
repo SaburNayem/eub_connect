@@ -1,3 +1,5 @@
+import 'package:eub_connect/feature/common/notice/controller/notice_controller.dart';
+import 'package:eub_connect/feature/home/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 
 class NoticeScreen extends StatelessWidget {
@@ -5,8 +7,9 @@ class NoticeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Notice')),
+    return FeatureModuleControllerScreen<NoticeController>(
+      create: NoticeController.new,
+      featureBuilder: (controller) => controller.model.value.feature,
     );
   }
 }

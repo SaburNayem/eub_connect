@@ -2,9 +2,10 @@ import 'package:eub_connect/core/constant/app_color/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class PhotoField extends StatelessWidget {
-  const PhotoField({required this.onTap, super.key});
+  const PhotoField({required this.onTap, this.selected = false, super.key});
 
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -28,27 +29,34 @@ class PhotoField extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFFE3E6EA)),
               ),
-              child: const Icon(
-                Icons.add_a_photo_outlined,
+              child: Icon(
+                selected
+                    ? Icons.check_circle_outline
+                    : Icons.add_a_photo_outlined,
                 color: AppColors.secondary,
               ),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Profile Photo',
                     style: TextStyle(
                       color: AppColors.textDark,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'Upload photo option',
-                    style: TextStyle(color: Color(0xFF707070), fontSize: 13),
+                    selected
+                        ? 'Photo selected for demo'
+                        : 'Upload photo option',
+                    style: const TextStyle(
+                      color: Color(0xFF707070),
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
