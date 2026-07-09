@@ -1,4 +1,4 @@
-import 'package:eub_connect/feature/common/notice/model/notice_model.dart';
+﻿import 'package:eub_connect/feature/common/notice/model/notice_model.dart';
 import 'package:get/get.dart';
 
 class NoticeController extends GetxController {

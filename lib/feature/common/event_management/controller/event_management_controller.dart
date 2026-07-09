@@ -1,4 +1,4 @@
-import 'package:eub_connect/feature/common/event_management/model/event_management_model.dart';
+﻿import 'package:eub_connect/feature/common/event_management/model/event_management_model.dart';
 import 'package:get/get.dart';
 
 class EventManagementController extends GetxController {

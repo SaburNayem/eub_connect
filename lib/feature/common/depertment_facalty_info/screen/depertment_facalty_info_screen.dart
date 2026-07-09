@@ -1,4 +1,4 @@
-import 'package:eub_connect/feature/common/depertment_facalty_info/controller/depertment_facalty_info_controller.dart';
+﻿import 'package:eub_connect/feature/common/depertment_facalty_info/controller/depertment_facalty_info_controller.dart';
 import 'package:eub_connect/feature/home/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 

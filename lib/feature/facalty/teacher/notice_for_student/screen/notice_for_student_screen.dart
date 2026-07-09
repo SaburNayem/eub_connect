@@ -1,4 +1,4 @@
-import 'package:eub_connect/feature/facalty/teacher/notice_for_student/controller/notice_for_student_controller.dart';
+﻿import 'package:eub_connect/feature/facalty/teacher/notice_for_student/controller/notice_for_student_controller.dart';
 import 'package:eub_connect/feature/home/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 
