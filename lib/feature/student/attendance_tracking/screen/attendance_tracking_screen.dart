@@ -1,4 +1,5 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
+import 'package:eub_connect/core/ui/state_panels.dart';
 import 'package:eub_connect/feature/student/attendance_tracking/controller/attendance_tracking_controller.dart';
 import 'package:eub_connect/feature/student/attendance_tracking/model/attendance_tracking_model.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,17 @@ class AttendanceTrackingScreen extends StatelessWidget {
       ),
       body: Obx(() {
         final model = controller.model.value;
+        if (model.courses.isEmpty) {
+          return const SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            child: EmptyStatePanel(
+              title: 'No attendance records',
+              message:
+                  'This demo account does not have enrolled course attendance yet.',
+              icon: Icons.how_to_reg_outlined,
+            ),
+          );
+        }
         final selectedCourse = controller.selectedCourse;
 
         return SingleChildScrollView(

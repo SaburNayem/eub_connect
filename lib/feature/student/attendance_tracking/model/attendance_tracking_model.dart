@@ -53,10 +53,10 @@ class CourseAttendance {
 }
 
 class AttendanceTrackingModel extends FeatureModuleModel {
-  const AttendanceTrackingModel()
+  const AttendanceTrackingModel({this.courses = studentAttendanceCourses})
     : super(title: 'Attendance', category: 'Student');
 
-  List<CourseAttendance> get courses => studentAttendanceCourses;
+  final List<CourseAttendance> courses;
 
   int get totalClasses {
     return courses.fold(0, (total, course) => total + course.total);

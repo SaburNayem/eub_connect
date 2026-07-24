@@ -1,5 +1,6 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
 import 'package:eub_connect/core/data/async_value.dart';
+import 'package:eub_connect/core/demo/demo_store.dart';
 import 'package:eub_connect/core/routes/app_routes.dart';
 import 'package:eub_connect/core/ui/state_panels.dart';
 import 'package:eub_connect/feature/auth/controller/auth_session_controller.dart';
@@ -12,6 +13,7 @@ import 'package:get/get.dart';
 class HomeController extends GetxController {
   final AuthSessionController _session = ensureAuthSession();
   final DashboardRepository _dashboardRepository = DashboardRepository();
+  final DemoStore _demoStore = DemoStore.instance;
   final activeRole = PortalRole.student.obs;
   final selectedFeatureIndex = (-1).obs;
   final selectedNavigationGroupIndex = 0.obs;
@@ -34,6 +36,7 @@ class HomeController extends GetxController {
       navigationQuery.value = '';
       loadDashboardMetrics();
     });
+    ever(_demoStore.revision, (_) => loadDashboardMetrics());
   }
 
   DashboardProfile get dashboardProfile {
@@ -239,7 +242,7 @@ class HomeController extends GetxController {
   void showMessage(String label) {
     Get.snackbar(
       'EUB Connect',
-      '$label requires a configured backend record or permission.',
+      '$label is available through the local demo workspace.',
       snackPosition: SnackPosition.BOTTOM,
       margin: const EdgeInsets.all(14),
       backgroundColor: AppColors.primary,
@@ -465,27 +468,34 @@ class FeatureModuleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final feature = _feature;
+    return Obx(() {
+      final store = DemoStore.instance;
+      final revision = store.revision.value;
+      final feature = store.hydrateFeature(_feature, ensureAuthSession().role);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        foregroundColor: AppColors.primary,
-        surfaceTintColor: AppColors.white,
-        leading: BackButton(onPressed: () => Get.back()),
-        title: Text(feature.title),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1180),
-            child: _FeatureDetailView(feature: feature),
+      return KeyedSubtree(
+        key: ValueKey(revision),
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.white,
+            foregroundColor: AppColors.primary,
+            surfaceTintColor: AppColors.white,
+            leading: BackButton(onPressed: () => Get.back()),
+            title: Text(feature.title),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: _FeatureDetailView(feature: feature),
+              ),
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 
@@ -689,7 +699,7 @@ class _DesktopTopBar extends StatelessWidget {
                 ),
                 SizedBox(height: 3),
                 Text(
-                  'Static operations workspace',
+                  'Local demo operations workspace',
                   style: TextStyle(color: Color(0xFF667085), fontSize: 13),
                 ),
               ],
@@ -1079,7 +1089,7 @@ class _DashboardMetricStateView extends StatelessWidget {
       return const EmptyStatePanel(
         title: 'No dashboard records yet',
         message:
-            'When Supabase contains university records, dashboard metrics are calculated from those rows.',
+            'Demo metrics are calculated from the local university dataset.',
         icon: Icons.query_stats_outlined,
       );
     }
@@ -1179,6 +1189,9 @@ class _FeatureDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasMetrics = feature.metrics.isNotEmpty;
+    final hasRecords = feature.records.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1199,16 +1212,250 @@ class _FeatureDetailView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        if (feature.metrics.isEmpty)
+        if (!hasMetrics && !hasRecords)
           EmptyStatePanel(
             title: 'No records yet',
             message:
-                '${feature.title} will display records after the related Supabase tables contain data.',
+                '${feature.title} has no matching local demo records for the current filter.',
             icon: feature.icon,
           )
-        else
+        else if (hasMetrics)
           _MetricGrid(metrics: feature.metrics, accent: feature.accent),
+        if (feature.actions.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          _FeatureActionBar(feature: feature),
+        ],
+        if (hasRecords) ...[
+          const SizedBox(height: 18),
+          _FeatureRecordList(feature: feature),
+        ],
       ],
+    );
+  }
+}
+
+class _FeatureActionBar extends StatelessWidget {
+  const _FeatureActionBar({required this.feature});
+
+  final StaticFeature feature;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE3E6EA)),
+      ),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          for (final action in feature.actions)
+            FilledButton.icon(
+              onPressed: () => _runAction(context, action),
+              icon: Icon(_actionIcon(action)),
+              label: Text(action),
+              style: FilledButton.styleFrom(
+                backgroundColor: feature.accent,
+                foregroundColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runAction(BuildContext context, String action) async {
+    final needsConfirm =
+        action == 'Reset Demo Data' || action == 'Hide reported content';
+    if (needsConfirm) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: Text(action),
+            content: Text(
+              action == 'Reset Demo Data'
+                  ? 'Restore the original local demo seed? This removes changes made during this demo session.'
+                  : 'Hide the first pending reported forum item in local demo state?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Confirm'),
+              ),
+            ],
+          );
+        },
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+
+    try {
+      final message = DemoStore.instance.performFeatureAction(
+        feature.title,
+        action,
+      );
+      Get.snackbar(
+        feature.title,
+        message,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(14),
+        backgroundColor: feature.accent,
+        colorText: AppColors.white,
+      );
+    } on StateError catch (error) {
+      Get.snackbar(
+        feature.title,
+        error.message,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(14),
+      );
+    } catch (error) {
+      Get.snackbar(
+        feature.title,
+        'Unable to complete this local demo action.',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(14),
+      );
+    }
+  }
+
+  IconData _actionIcon(String action) {
+    if (action.contains('Reset')) return Icons.restart_alt_outlined;
+    if (action.contains('payment')) return Icons.payments_outlined;
+    if (action.contains('event') || action.contains('Register')) {
+      return Icons.event_available_outlined;
+    }
+    if (action.contains('club') || action.contains('Join')) {
+      return Icons.groups_outlined;
+    }
+    if (action.contains('support') || action.contains('ticket')) {
+      return Icons.support_agent_outlined;
+    }
+    if (action.contains('forum') || action.contains('post')) {
+      return Icons.forum_outlined;
+    }
+    if (action.contains('Approve')) return Icons.verified_outlined;
+    if (action.contains('attendance')) return Icons.how_to_reg_outlined;
+    if (action.contains('notice')) return Icons.campaign_outlined;
+    if (action.contains('notifications')) return Icons.notifications_outlined;
+    return Icons.check_circle_outline;
+  }
+}
+
+class _FeatureRecordList extends StatelessWidget {
+  const _FeatureRecordList({required this.feature});
+
+  final StaticFeature feature;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE3E6EA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SectionHeader(
+            title: feature.title,
+            subtitle: '${feature.records.length} calculated demo records',
+          ),
+          const SizedBox(height: 12),
+          for (final record in feature.records) ...[
+            _FeatureRecordTile(record: record, accent: feature.accent),
+            const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureRecordTile extends StatelessWidget {
+  const _FeatureRecordTile({required this.record, required this.accent});
+
+  final StaticRecord record;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE3E6EA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(record.icon, color: accent, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  record.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textDark,
+                    fontWeight: FontWeight.w900,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  record.subtitle,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF667085),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    _StatusPill(label: record.meta, color: accent),
+                    _StatusPill(
+                      label: record.status,
+                      color: const Color(0xFF475467),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1864,6 +2111,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(maxWidth: 260),
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),

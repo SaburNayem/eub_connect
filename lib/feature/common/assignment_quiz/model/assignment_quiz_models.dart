@@ -39,6 +39,7 @@ class CourseAssignment {
     required this.totalMarks,
     required this.status,
     required this.allowResubmission,
+    this.attachments = const [],
   });
 
   final String id;
@@ -50,6 +51,7 @@ class CourseAssignment {
   final num totalMarks;
   final String status;
   final bool allowResubmission;
+  final List<String> attachments;
 }
 
 class AssignmentSubmission {

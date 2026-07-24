@@ -195,7 +195,7 @@ StaticFeature moduleFeature({
     category: category,
     description:
         description ??
-        'This feature is connected to the production data layer. Configure Supabase and migrate the related records to use it.',
+        'This feature uses the shared local demo university dataset and can be replaced by a repository/API later.',
     icon: icon ?? moduleFallbackIcon(title),
     accent: accent,
     access: access,
@@ -272,7 +272,7 @@ const staticFeatures = [
     title: 'Authentication',
     category: 'Core',
     description:
-        'Supabase Auth sign in, registration, session restore, role assignment, and account security.',
+        'Demo sign in, registration, session restore, role assignment, and account security.',
     icon: Icons.login_outlined,
     accent: Color(0xFF2A2D7E),
     access: allPortalRoles,

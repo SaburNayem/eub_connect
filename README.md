@@ -1,96 +1,87 @@
 # EUB Connect
 
-EUB Connect is a Flutter/GetX university management app for students, teachers, faculty staff, and administrators. The project keeps the existing feature-first folder structure while moving operational data to Supabase/PostgreSQL.
+EUB Connect is a Flutter/GetX university management demo for students, teachers, faculty staff, and administrators. The active app now runs in local demo mode first: login, dashboards, assignments, quizzes, attendance, payments, events, support, forum data, approvals, notifications, and settings are powered by a shared local dataset.
 
 ## Stack
 
 - Flutter and Dart
 - GetX for routing/state
-- Supabase Auth
-- Supabase PostgreSQL with RLS
-- Supabase Storage
+- GetStorage for local demo persistence
 - Material 3
+- Supabase files are kept as future backend scaffolding, but are not required to run the demo
 
-## Environment
+## Demo Accounts
 
-Copy `.env.example` for reference, but pass secrets through `--dart-define` for Flutter builds:
+All demo accounts use password `123456`. Login accepts either ID or email.
 
-```bash
-flutter run \
-  --dart-define=SUPABASE_URL=https://your-project.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=your-public-anon-key \
-  --dart-define=SUPABASE_STORAGE_BUCKET=app-files
-```
+| Role | ID | Email | Name |
+| --- | --- | --- | --- |
+| Student | `2023001001` | `student@eub.edu.bd` | Nayem Ahmed |
+| Teacher | `T1001` | `teacher@eub.edu.bd` | Dr. Farhan Rahman |
+| Faculty | `F1001` | `faculty@eub.edu.bd` | Md. Rakib Hasan |
+| Admin | `ADMIN001` | `admin@eub.edu.bd` | System Administrator |
 
-Do not commit service-role keys or production credentials.
+The login screen includes a demo account picker that fills the selected ID and password.
 
-## Supabase Setup
+## Demo Data
 
-Install the Supabase CLI, link your project, then apply migrations:
-
-```bash
-supabase login
-supabase link --project-ref your-project-ref
-supabase db push
-```
-
-Schema files live in:
+The local dataset lives under:
 
 ```text
-supabase/migrations/
+lib/core/demo/
 ```
 
-Optional development seed data lives in:
+It includes:
 
-```text
-supabase/seed/dev_seed.sql
-```
+- 20 students, 10 teachers, faculty/admin users
+- 5 departments and 15 courses
+- sections, enrollments, weekly routines, rooms, and attendance history
+- 15 assignments, student submissions, teacher grading, 10 quizzes, quiz attempts
+- 20 notices, 10 events, clubs, scholarships, invoices, payments, results
+- 24 forum posts, 72 comments/replies, moderation reports
+- support tickets, notifications, approvals, and 40 activity entries
 
-Seed data is intentionally outside Flutter source. The app should show empty states when the database has no records.
+Important counters are calculated from these collections. For example, forum post/comment counts come from the forum lists, attendance percentages come from attendance rows, and tuition due comes from invoice/payment records.
 
-## Implemented Backend Foundation
+## Local Workflows
 
-- Supabase initialization in `lib/core/backend/supabase_backend.dart`
-- Environment parsing in `lib/core/config/app_environment.dart`
-- Shared app result/error types in `lib/core/backend/app_failure.dart`
-- Shared loading/empty/error panels in `lib/core/ui/state_panels.dart`
-- Normalized database schema and RLS policies for profiles, roles, academic data, assignments, quizzes, attendance, results, notices, events, forum, support, tuition, lost/found, approvals, audit logs, and settings
-- Storage bucket and policies for protected uploads
-- Supabase Auth login/session restoration
-- Public registration creates student accounts only; teacher/faculty/admin roles must be assigned by an admin
+Local demo state persists with GetStorage and survives app restart where practical.
 
-## Migrated Features
+Implemented cross-role examples:
 
-- Home feature registry is now metadata-only. It no longer stores dashboard counts, fake records, or operational activity.
-- Home dashboard metrics load from the database aggregate view and show loading/error/empty states.
-- Student assignments load from Supabase, support filtering by enrolled section, and persist submissions.
-- Student quizzes load from Supabase, show actual questions/options, and persist attempts.
-- Teacher/faculty assignment and quiz management loads from Supabase, publishes assignments/quizzes, lists submissions/attempts, and persists grading.
-- Static role login accounts were removed.
+- Teacher publishes/grades assignment -> student sees assignment/grade/notification
+- Student submits assignment -> teacher sees submission
+- Student submits quiz -> teacher sees attempt
+- Teacher marks attendance -> student attendance screen updates
+- Student pays demo invoice -> invoice due and payment history update
+- Student creates forum report -> admin/faculty moderation sees it
+- Student creates support ticket -> faculty/admin can reply
+- Event registration, club join, approvals, notices, notifications, and reset actions update local state
 
-## Remaining Work
-
-Several existing modules still render through the shared feature placeholder wrapper while their database tables now exist. They need dedicated repositories/controllers/screens connected to the schema:
-
-- attendance management persistence UI
-- profile edit/photo upload
-- class routine from `class_schedules`
-- events, notices, lost/found CRUD
-- forum post/comment/reaction/report flows
-- support ticket conversation UI
-- tuition/payment provider integration
-- faculty/admin CRUD screens and audit workflows
+Settings includes `Reset Demo Data`, which restores the original seed.
 
 ## Run
 
 ```bash
 flutter pub get
-flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+flutter run
 ```
 
-Without Supabase configuration, the app builds and shows backend-not-configured states rather than fake data.
+No Supabase credentials are required for the current demo version.
 
-## Test
+## Future Backend
+
+The previous Supabase foundation remains in:
+
+```text
+lib/core/backend/
+lib/core/config/
+supabase/
+```
+
+Those files are not active in app startup now. They can be used later to replace demo repositories with API/Supabase repositories without rebuilding screens from scratch.
+
+## Quality Checks
 
 ```bash
 dart format .
@@ -98,4 +89,4 @@ flutter analyze
 flutter test
 ```
 
-Current tests cover core GPA, attendance, tuition, quiz scoring, and schedule conflict calculations.
+Current tests cover GPA, attendance percentage, tuition due, quiz scoring, and schedule conflict calculations.

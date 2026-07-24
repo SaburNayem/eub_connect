@@ -1,4 +1,5 @@
 import 'package:eub_connect/core/data/async_value.dart';
+import 'package:eub_connect/core/demo/demo_store.dart';
 import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_models.dart';
 import 'package:eub_connect/feature/common/assignment_quiz/repository/assignment_quiz_repository.dart';
 import 'package:eub_connect/feature/student/assingment/model/assingment_model.dart';
@@ -13,10 +14,12 @@ class AssingmentController extends GetxController {
   final model = const AssingmentModel().obs;
   final selectedSubjectCode = 'all'.obs;
   final workspace = const AsyncValue<AssignmentQuizWorkspace>.loading().obs;
+  Worker? _demoRevisionWorker;
 
   @override
   void onInit() {
     super.onInit();
+    _demoRevisionWorker = ever(DemoStore.instance.revision, (_) => load());
     load();
   }
 
@@ -98,5 +101,11 @@ class AssingmentController extends GetxController {
     }
 
     moduleStatus.value = result.failure?.message ?? 'Submission failed';
+  }
+
+  @override
+  void onClose() {
+    _demoRevisionWorker?.dispose();
+    super.onClose();
   }
 }

@@ -1,3 +1,5 @@
+import 'package:eub_connect/core/demo/demo_models.dart';
+import 'package:eub_connect/core/demo/demo_store.dart';
 import 'package:eub_connect/feature/home/model/static_feature.dart';
 
 class AppAccount {
@@ -28,12 +30,24 @@ class AppAccount {
     );
   }
 
+  factory AppAccount.fromDemo(DemoAccount account, DemoStore store) {
+    return AppAccount(
+      id: account.id,
+      fullName: account.fullName,
+      email: account.email,
+      role: account.role,
+      universityId: account.universityId,
+      department: store.departmentName(account.departmentId),
+      phone: account.phone,
+    );
+  }
+
   static const guest = AppAccount(
     id: 'guest',
     fullName: 'Not signed in',
     email: '',
     role: PortalRole.student,
-    department: 'Backend not connected',
+    department: 'Demo mode',
   );
 
   final String id;

@@ -379,9 +379,12 @@ class _StudentAssignmentCard extends StatelessWidget {
             children: [
               OutlinedButton.icon(
                 onPressed: () {
+                  final fileName = assignment.attachments.isEmpty
+                      ? '${assignment.subject.code.replaceAll(' ', '-')}-${assignment.title.replaceAll(' ', '-')}.pdf'
+                      : assignment.attachments.first;
                   Get.snackbar(
                     'Assignments',
-                    'Teacher resources appear here after files are attached.',
+                    'Mock download ready: $fileName',
                     snackPosition: SnackPosition.BOTTOM,
                     margin: const EdgeInsets.all(14),
                   );

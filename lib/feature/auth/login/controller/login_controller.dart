@@ -20,6 +20,11 @@ class LoginController extends GetxController {
     return formKey.currentState?.validate() ?? false;
   }
 
+  void fillDemoAccount({required String identifier}) {
+    emailController.text = identifier;
+    passwordController.text = '123456';
+  }
+
   Future<bool> submit() async {
     if (!validate()) {
       return false;

@@ -1,4 +1,5 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
+import 'package:eub_connect/core/demo/demo_store.dart';
 import 'package:eub_connect/feature/auth/controller/auth_session_controller.dart';
 import 'package:eub_connect/feature/auth/login/controller/login_controller.dart';
 import 'package:eub_connect/feature/auth/widget/auth_panel.dart';
@@ -81,18 +82,15 @@ class _LoginScreenState extends State<LoginScreen> {
           onSubmit: _controller.isSubmitting.value ? () {} : _login,
           children: [
             AuthTextField(
-              label: 'Email Address',
-              icon: Icons.email_outlined,
+              label: 'Student/Teacher ID or Email',
+              icon: Icons.badge_outlined,
               controller: _controller.emailController,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
               validator: (value) {
-                final email = value?.trim() ?? '';
-                if (email.isEmpty) {
-                  return 'Email address is required';
-                }
-                if (!email.contains('@')) {
-                  return 'Enter a valid email address';
+                final identifier = value?.trim() ?? '';
+                if (identifier.isEmpty) {
+                  return 'ID or email is required';
                 }
                 return null;
               },
@@ -108,14 +106,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 if (value == null || value.isEmpty) {
                   return 'Password is required';
                 }
-                if (value.length < 8) {
-                  return 'Password must be at least 8 characters';
+                if (value.length < 6) {
+                  return 'Password must be at least 6 characters';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 16),
-            _BackendNotice(),
+            _DemoAccountsPanel(controller: _controller),
           ],
         ),
       ),
@@ -123,11 +121,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _BackendNotice extends StatelessWidget {
-  const _BackendNotice();
+class _DemoAccountsPanel extends StatelessWidget {
+  const _DemoAccountsPanel({required this.controller});
+
+  final LoginController controller;
 
   @override
   Widget build(BuildContext context) {
+    final accounts = DemoStore.instance.demoLoginAccounts;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -137,19 +138,43 @@ class _BackendNotice extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'Backend account required',
+        children: [
+          const Text(
+            'Demo Accounts',
             style: TextStyle(
               color: AppColors.textDark,
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 6),
-          Text(
-            'Use a Supabase Auth user with a profile and assigned role. '
-            'Public registration creates student accounts only.',
+          const SizedBox(height: 6),
+          const Text(
+            'Tap a role to fill the demo ID and password. Role access still comes from the credentials.',
             style: TextStyle(color: Color(0xFF667085), height: 1.35),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final account in accounts)
+                ActionChip(
+                  avatar: Icon(account.role.icon, size: 18),
+                  label: Text(account.role.label),
+                  tooltip:
+                      '${account.universityId} / ${account.email} / password 123456',
+                  onPressed: () {
+                    controller.fillDemoAccount(
+                      identifier: account.universityId,
+                    );
+                    Get.snackbar(
+                      'Demo account filled',
+                      '${account.role.label}: ${account.universityId} / 123456',
+                      snackPosition: SnackPosition.BOTTOM,
+                      margin: const EdgeInsets.all(14),
+                    );
+                  },
+                ),
+            ],
           ),
         ],
       ),

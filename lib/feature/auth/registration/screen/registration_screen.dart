@@ -77,7 +77,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       key: _controller.formKey,
       child: AuthPanel(
         title: 'Create Account',
-        subtitle: 'Create a student account with Supabase Auth',
+        subtitle: 'Create a local demo student account',
         buttonLabel: 'Register',
         onSubmit: _register,
         children: [
