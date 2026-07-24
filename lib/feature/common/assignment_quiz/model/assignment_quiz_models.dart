@@ -131,6 +131,20 @@ class QuizOption {
   final String text;
 }
 
+class QuizDraftQuestion {
+  const QuizDraftQuestion({
+    required this.question,
+    required this.options,
+    required this.correctIndex,
+    required this.marks,
+  });
+
+  final String question;
+  final List<String> options;
+  final int correctIndex;
+  final num marks;
+}
+
 class QuizAttempt {
   const QuizAttempt({
     required this.id,

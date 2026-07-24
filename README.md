@@ -33,11 +33,11 @@ lib/core/demo/
 
 It includes:
 
-- 20 students, 10 teachers, faculty/admin users
+- 180 students, 10 teachers, faculty/admin users
 - 5 departments and 15 courses
 - sections, enrollments, weekly routines, rooms, and attendance history
 - 15 assignments, student submissions, teacher grading, 10 quizzes, quiz attempts
-- 20 notices, 10 events, clubs, scholarships, invoices, payments, results
+- 20 notices, 10 events, clubs, scholarships, 80 invoices, 99 payments, 427 result rows
 - 24 forum posts, 72 comments/replies, moderation reports
 - support tickets, notifications, approvals, and 40 activity entries
 
@@ -53,9 +53,11 @@ Implemented cross-role examples:
 - Student submits assignment -> teacher sees submission
 - Student submits quiz -> teacher sees attempt
 - Teacher marks attendance -> student attendance screen updates
-- Student pays demo invoice -> invoice due and payment history update
+- Student pays invoice through a local payment simulation -> invoice due and payment history update
 - Student creates forum report -> admin/faculty moderation sees it
-- Student creates support ticket -> faculty/admin can reply
+- Student creates forum posts through a validated form
+- Student creates support ticket through category/priority/description form -> faculty/admin can reply
+- Teacher publishes quizzes with entered questions/options/correct answers
 - Event registration, club join, approvals, notices, notifications, and reset actions update local state
 
 Settings includes `Reset Demo Data`, which restores the original seed.

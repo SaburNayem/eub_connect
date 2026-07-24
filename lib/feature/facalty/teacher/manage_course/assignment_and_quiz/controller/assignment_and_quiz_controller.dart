@@ -157,6 +157,7 @@ class AssignmentAndQuizController extends GetxController {
     required String title,
     required String schedule,
     required int marks,
+    required List<QuizDraftQuestion> questions,
   }) async {
     final sectionId = subjectCode;
     final opensAt =
@@ -169,6 +170,7 @@ class AssignmentAndQuizController extends GetxController {
       durationMinutes: 15,
       opensAt: opensAt,
       closesAt: opensAt.add(const Duration(hours: 2)),
+      questions: questions,
     );
     if (result.isSuccess) {
       selectedMode.value = TeacherWorkMode.quizzes;

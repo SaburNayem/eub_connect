@@ -1271,6 +1271,27 @@ class _FeatureActionBar extends StatelessWidget {
   }
 
   Future<void> _runAction(BuildContext context, String action) async {
+    if (action == 'Create forum post') {
+      await _showForumPostForm(context);
+      return;
+    }
+    if (action == 'Create support ticket') {
+      await _showSupportTicketForm(context);
+      return;
+    }
+    if (action == 'Reply to open ticket') {
+      await _showSupportReplyForm(context);
+      return;
+    }
+    if (action == 'Report latest post') {
+      await _showReportForm(context);
+      return;
+    }
+    if (action == 'Publish course notice') {
+      await _showNoticeForm(context);
+      return;
+    }
+
     final needsConfirm =
         action == 'Reset Demo Data' || action == 'Hide reported content';
     if (needsConfirm) {
@@ -1330,6 +1351,508 @@ class _FeatureActionBar extends StatelessWidget {
         margin: const EdgeInsets.all(14),
       );
     }
+  }
+
+  Future<void> _showForumPostForm(BuildContext context) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController();
+    final bodyController = TextEditingController();
+    var categoryId = store.forumCategories.first.id;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Create Discussion Post'),
+              content: SizedBox(
+                width: 520,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        DropdownButtonFormField<String>(
+                          initialValue: categoryId,
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                          ),
+                          items: [
+                            for (final category in store.forumCategories)
+                              DropdownMenuItem(
+                                value: category.id,
+                                child: Text(category.name),
+                              ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => categoryId = value);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: titleController,
+                          decoration: const InputDecoration(labelText: 'Title'),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            if (text.length < 8) {
+                              return 'Enter a clear title';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: bodyController,
+                          minLines: 4,
+                          maxLines: 6,
+                          decoration: const InputDecoration(
+                            labelText: 'Description',
+                            alignLabelWithHint: true,
+                          ),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            if (text.length < 20) {
+                              return 'Write at least 20 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton.icon(
+                  onPressed: () {
+                    if (formKey.currentState?.validate() != true) {
+                      return;
+                    }
+                    store.createForumPost(
+                      categoryId: categoryId,
+                      title: titleController.text,
+                      body: bodyController.text,
+                    );
+                    Navigator.of(dialogContext).pop();
+                    _showSuccess('Discussion post created');
+                  },
+                  icon: const Icon(Icons.forum_outlined),
+                  label: const Text('Post'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    titleController.dispose();
+    bodyController.dispose();
+  }
+
+  Future<void> _showSupportTicketForm(BuildContext context) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final subjectController = TextEditingController();
+    final descriptionController = TextEditingController();
+    var category = 'Academic';
+    var priority = 'Medium';
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Create Support Ticket'),
+              content: SizedBox(
+                width: 520,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        DropdownButtonFormField<String>(
+                          initialValue: category,
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'Academic',
+                              child: Text('Academic'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Finance',
+                              child: Text('Finance'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'IT Support',
+                              child: Text('IT Support'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Student Affairs',
+                              child: Text('Student Affairs'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => category = value);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          initialValue: priority,
+                          decoration: const InputDecoration(
+                            labelText: 'Priority',
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Low', child: Text('Low')),
+                            DropdownMenuItem(
+                              value: 'Medium',
+                              child: Text('Medium'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'High',
+                              child: Text('High'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => priority = value);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: subjectController,
+                          decoration: const InputDecoration(
+                            labelText: 'Subject',
+                          ),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            if (text.length < 6) {
+                              return 'Enter a specific subject';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: descriptionController,
+                          minLines: 4,
+                          maxLines: 6,
+                          decoration: const InputDecoration(
+                            labelText: 'Description',
+                            alignLabelWithHint: true,
+                          ),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            if (text.length < 20) {
+                              return 'Describe the issue clearly';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton.icon(
+                  onPressed: () {
+                    if (formKey.currentState?.validate() != true) {
+                      return;
+                    }
+                    store.createSupportTicket(
+                      category: category,
+                      subject: subjectController.text,
+                      priority: priority,
+                      description: descriptionController.text,
+                    );
+                    Navigator.of(dialogContext).pop();
+                    _showSuccess('Support ticket created');
+                  },
+                  icon: const Icon(Icons.support_agent_outlined),
+                  label: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    subjectController.dispose();
+    descriptionController.dispose();
+  }
+
+  Future<void> _showSupportReplyForm(BuildContext context) async {
+    final controller = TextEditingController();
+    await _showSingleTextForm(
+      context: context,
+      title: 'Reply To Ticket',
+      label: 'Response',
+      controller: controller,
+      minLength: 12,
+      onSubmit: () {
+        DemoStore.instance.replyFirstOpenSupportTicket(
+          message: controller.text,
+        );
+      },
+      success: 'Support reply sent',
+    );
+    controller.dispose();
+  }
+
+  Future<void> _showReportForm(BuildContext context) async {
+    final controller = TextEditingController();
+    await _showSingleTextForm(
+      context: context,
+      title: 'Report Discussion',
+      label: 'Reason',
+      controller: controller,
+      minLength: 10,
+      onSubmit: () {
+        DemoStore.instance.reportLatestForumPost(reason: controller.text);
+      },
+      success: 'Forum report created',
+    );
+    controller.dispose();
+  }
+
+  Future<void> _showNoticeForm(BuildContext context) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController();
+    final bodyController = TextEditingController();
+    final visibleSections = store.visibleSectionsForRole();
+    var target = store.currentRole == PortalRole.teacher ? 'students' : 'all';
+    String? sectionId = visibleSections.isEmpty
+        ? null
+        : visibleSections.first.id;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Publish Notice'),
+              content: SizedBox(
+                width: 520,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        DropdownButtonFormField<String>(
+                          initialValue: target,
+                          decoration: const InputDecoration(
+                            labelText: 'Audience',
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'all', child: Text('All')),
+                            DropdownMenuItem(
+                              value: 'student',
+                              child: Text('Students'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'teacher',
+                              child: Text('Teachers'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'faculty',
+                              child: Text('Faculty'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => target = value);
+                            }
+                          },
+                        ),
+                        if (visibleSections.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            initialValue: sectionId,
+                            decoration: const InputDecoration(
+                              labelText: 'Course section',
+                            ),
+                            items: [
+                              const DropdownMenuItem(
+                                value: '',
+                                child: Text('No section target'),
+                              ),
+                              for (final section in visibleSections)
+                                DropdownMenuItem(
+                                  value: section.id,
+                                  child: Text(
+                                    '${store.subjectForSection(section.id).code} ${section.sectionCode}',
+                                  ),
+                                ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                sectionId = value?.isEmpty == true
+                                    ? null
+                                    : value;
+                              });
+                            },
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: titleController,
+                          decoration: const InputDecoration(labelText: 'Title'),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            if (text.length < 6) {
+                              return 'Enter a notice title';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: bodyController,
+                          minLines: 4,
+                          maxLines: 6,
+                          decoration: const InputDecoration(
+                            labelText: 'Message',
+                            alignLabelWithHint: true,
+                          ),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            if (text.length < 20) {
+                              return 'Write at least 20 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton.icon(
+                  onPressed: () {
+                    if (formKey.currentState?.validate() != true) {
+                      return;
+                    }
+                    store.publishNotice(
+                      title: titleController.text,
+                      body: bodyController.text,
+                      target: target,
+                      sectionId: sectionId,
+                    );
+                    Navigator.of(dialogContext).pop();
+                    _showSuccess('Notice published');
+                  },
+                  icon: const Icon(Icons.campaign_outlined),
+                  label: const Text('Publish'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    titleController.dispose();
+    bodyController.dispose();
+  }
+
+  Future<void> _showSingleTextForm({
+    required BuildContext context,
+    required String title,
+    required String label,
+    required TextEditingController controller,
+    required int minLength,
+    required VoidCallback onSubmit,
+    required String success,
+  }) {
+    final formKey = GlobalKey<FormState>();
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: 480,
+            child: Form(
+              key: formKey,
+              child: TextFormField(
+                controller: controller,
+                minLines: 4,
+                maxLines: 6,
+                decoration: InputDecoration(
+                  labelText: label,
+                  alignLabelWithHint: true,
+                ),
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.length < minLength) {
+                    return 'Please enter at least $minLength characters';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) {
+                  return;
+                }
+                onSubmit();
+                Navigator.of(dialogContext).pop();
+                _showSuccess(success);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSuccess(String message) {
+    Get.snackbar(
+      feature.title,
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(14),
+      backgroundColor: feature.accent,
+      colorText: AppColors.white,
+    );
   }
 
   IconData _actionIcon(String action) {

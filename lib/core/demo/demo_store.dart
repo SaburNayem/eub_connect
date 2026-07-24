@@ -13,7 +13,7 @@ class DemoStore extends GetxController {
   DemoStore._(this._storage);
 
   static const _boxName = 'eub_connect_demo';
-  static const _stateKey = 'demo_state_v2';
+  static const _stateKey = 'presentation_state_v3';
   static DemoStore? _instance;
 
   final GetStorage _storage;
@@ -123,7 +123,7 @@ class DemoStore extends GetxController {
       actorId: account.id,
       title: '${account.role.label} signed in',
       detail:
-          '${account.fullName} opened the demo ${account.role.label.toLowerCase()} workspace.',
+          '${account.fullName} opened the ${account.role.label.toLowerCase()} workspace.',
     );
     _persist();
     return account;
@@ -141,7 +141,7 @@ class DemoStore extends GetxController {
           account.universityId.toLowerCase() == universityId.toLowerCase();
     });
     if (exists) {
-      throw StateError('This ID or email already exists in demo data.');
+      throw StateError('This ID or email already exists.');
     }
     final account = DemoAccount(
       id: _nextId('u-stu'),
@@ -163,13 +163,13 @@ class DemoStore extends GetxController {
     currentAccountId = account.id;
     addNotification(
       userId: account.id,
-      title: 'Demo account created',
-      body: 'Your local student demo account is ready.',
+      title: 'Account created',
+      body: 'Your local student account is ready.',
     );
     addActivity(
       actorId: account.id,
       title: 'Student registered',
-      detail: '$fullName created a local demo student account.',
+      detail: '$fullName created a local student account.',
     );
     _persist();
     return account;
@@ -406,7 +406,7 @@ class DemoStore extends GetxController {
   }) {
     final student = currentAccount;
     if (student == null || student.role != PortalRole.student) {
-      throw StateError('Only a student demo account can submit assignments.');
+      throw StateError('Only a student account can submit assignments.');
     }
     final assignment = assignments.firstWhere(
       (item) => item.id == assignmentId,
@@ -492,7 +492,7 @@ class DemoStore extends GetxController {
   }) {
     final teacher = currentAccount;
     if (teacher == null) {
-      throw StateError('No demo account is signed in.');
+      throw StateError('No account is signed in.');
     }
     final assignment = DemoAssignment(
       id: _nextId('asg'),
@@ -535,12 +535,30 @@ class DemoStore extends GetxController {
     required int durationMinutes,
     required DateTime opensAt,
     required DateTime closesAt,
+    required List<QuizDraftQuestion> questions,
   }) {
     final teacher = currentAccount;
     if (teacher == null) {
-      throw StateError('No demo account is signed in.');
+      throw StateError('No account is signed in.');
     }
     final prefix = 'quiz-${DateTime.now().millisecondsSinceEpoch}';
+    final quizQuestions = questions.asMap().entries.map((entry) {
+      final questionIndex = entry.key + 1;
+      final draft = entry.value;
+      final questionId = '$prefix-q$questionIndex';
+      return DemoQuizQuestion(
+        id: questionId,
+        question: draft.question.trim(),
+        marks: draft.marks,
+        correctOptionId: '$questionId-o${draft.correctIndex + 1}',
+        options: draft.options.asMap().entries.map((optionEntry) {
+          return DemoQuizOption(
+            id: '$questionId-o${optionEntry.key + 1}',
+            text: optionEntry.value.trim(),
+          );
+        }).toList(),
+      );
+    }).toList();
     final quiz = DemoQuiz(
       id: _nextId('quiz'),
       sectionId: sectionId,
@@ -552,29 +570,7 @@ class DemoStore extends GetxController {
       opensAt: opensAt,
       closesAt: closesAt,
       status: 'published',
-      questions: [
-        DemoQuizQuestion(
-          id: '$prefix-q1',
-          question: 'Which course concept is most relevant to $title?',
-          marks: totalMarks,
-          correctOptionId: '$prefix-q1-o1',
-          options: [
-            DemoQuizOption(
-              id: '$prefix-q1-o1',
-              text: 'The main concept discussed in class',
-            ),
-            DemoQuizOption(
-              id: '$prefix-q1-o2',
-              text: 'A topic from a different course',
-            ),
-            DemoQuizOption(
-              id: '$prefix-q1-o3',
-              text: 'An administrative notice',
-            ),
-            DemoQuizOption(id: '$prefix-q1-o4', text: 'A payment receipt rule'),
-          ],
-        ),
-      ],
+      questions: quizQuestions,
     );
     quizzes.add(quiz);
     for (final enrollment in enrollments.where(
@@ -597,7 +593,7 @@ class DemoStore extends GetxController {
   void submitQuizAttempt(String quizId) {
     final student = currentAccount;
     if (student == null || student.role != PortalRole.student) {
-      throw StateError('Only a student demo account can submit quizzes.');
+      throw StateError('Only a student account can submit quizzes.');
     }
     final quiz = quizzes.firstWhere((item) => item.id == quizId);
     final existingAttempts = quizAttempts
@@ -687,7 +683,7 @@ class DemoStore extends GetxController {
   void simulateDemoPayment() {
     final student = currentAccount;
     if (student == null) {
-      throw StateError('No demo account is signed in.');
+      throw StateError('No account is signed in.');
     }
     final invoice = invoices.firstWhereOrNull((item) {
       return item.studentId == student.id && item.due > 0;
@@ -703,7 +699,7 @@ class DemoStore extends GetxController {
         invoiceId: invoice.id,
         studentId: student.id,
         amount: amount,
-        method: 'Demo payment simulation',
+        method: 'Portal payment simulation',
         paidAt: DateTime.now(),
         receiptNo: 'EUB-DEMO-${DateTime.now().millisecondsSinceEpoch}',
       ),
@@ -712,12 +708,12 @@ class DemoStore extends GetxController {
       userId: student.id,
       title: 'Payment received',
       body:
-          'Demo payment of ${_money(amount)} has been posted to ${invoice.semester}.',
+          'Payment of ${_money(amount)} has been posted to ${invoice.semester}.',
     );
     addActivity(
       actorId: student.id,
-      title: 'Demo payment received',
-      detail: '${student.fullName} paid ${_money(amount)} in demo mode.',
+      title: 'Payment received',
+      detail: '${student.fullName} paid ${_money(amount)} through the portal.',
     );
     _persist();
   }
@@ -725,7 +721,7 @@ class DemoStore extends GetxController {
   void registerNextEvent() {
     final student = currentAccount;
     if (student == null) {
-      throw StateError('No demo account is signed in.');
+      throw StateError('No account is signed in.');
     }
     final event = events.firstWhereOrNull((candidate) {
       return candidate.status == 'published' &&
@@ -736,9 +732,7 @@ class DemoStore extends GetxController {
           });
     });
     if (event == null) {
-      throw StateError(
-        'You are already registered for all available demo events.',
-      );
+      throw StateError('You are already registered for all available events.');
     }
     eventRegistrations.add(
       DemoEventRegistration(
@@ -765,7 +759,7 @@ class DemoStore extends GetxController {
   void joinFirstOpenClub() {
     final student = currentAccount;
     if (student == null) {
-      throw StateError('No demo account is signed in.');
+      throw StateError('No account is signed in.');
     }
     final club = clubs.firstWhereOrNull((candidate) {
       return !clubMemberships.any((membership) {
@@ -775,7 +769,7 @@ class DemoStore extends GetxController {
       });
     });
     if (club == null) {
-      throw StateError('You already belong to every demo club.');
+      throw StateError('You already belong to every club.');
     }
     clubMemberships.add(
       DemoClubMembership(
@@ -794,18 +788,21 @@ class DemoStore extends GetxController {
     _persist();
   }
 
-  void createForumPost() {
+  void createForumPost({
+    required String categoryId,
+    required String title,
+    required String body,
+  }) {
     final account = currentAccount;
     if (account == null) {
-      throw StateError('No demo account is signed in.');
+      throw StateError('No account is signed in.');
     }
     final post = DemoForumPost(
       id: _nextId('post'),
-      categoryId: 'cat-general',
+      categoryId: categoryId,
       authorId: account.id,
-      title: 'Question about today\'s portal demo workflow',
-      body:
-          'I tested the local demo flow and want to confirm whether changes persist after switching accounts.',
+      title: title.trim(),
+      body: body.trim(),
       createdAt: DateTime.now(),
       reactions: 0,
     );
@@ -818,10 +815,10 @@ class DemoStore extends GetxController {
     _persist();
   }
 
-  void reportLatestForumPost() {
+  void reportLatestForumPost({String? reason}) {
     final account = currentAccount;
     if (account == null) {
-      throw StateError('No demo account is signed in.');
+      throw StateError('No account is signed in.');
     }
     final post = forumPosts.firstWhereOrNull(
       (item) => !item.hidden && item.authorId != account.id,
@@ -834,7 +831,9 @@ class DemoStore extends GetxController {
         id: _nextId('report'),
         postId: post.id,
         reporterId: account.id,
-        reason: 'Student requested moderator review from the local demo forum.',
+        reason: reason?.trim().isNotEmpty == true
+            ? reason!.trim()
+            : 'Requested moderator review for this discussion.',
         status: 'pending',
         createdAt: DateTime.now(),
       ),
@@ -880,17 +879,22 @@ class DemoStore extends GetxController {
     _persist();
   }
 
-  void createSupportTicket() {
+  void createSupportTicket({
+    required String category,
+    required String subject,
+    required String priority,
+    required String description,
+  }) {
     final requester = currentAccount;
     if (requester == null) {
-      throw StateError('No demo account is signed in.');
+      throw StateError('No account is signed in.');
     }
     final ticket = DemoSupportTicket(
       id: _nextId('ticket'),
       requesterId: requester.id,
-      subject: 'Need help with demo portal data',
-      category: 'IT Support',
-      priority: 'Medium',
+      subject: subject.trim(),
+      category: category.trim(),
+      priority: priority.trim(),
       status: 'open',
       createdAt: DateTime.now(),
     );
@@ -900,8 +904,7 @@ class DemoStore extends GetxController {
         id: _nextId('msg'),
         ticketId: ticket.id,
         authorId: requester.id,
-        message:
-            'Please confirm that my local demo updates are saved after switching roles.',
+        message: description.trim(),
         createdAt: DateTime.now(),
       ),
     );
@@ -918,7 +921,7 @@ class DemoStore extends GetxController {
     _persist();
   }
 
-  void replyFirstOpenSupportTicket() {
+  void replyFirstOpenSupportTicket({String? message}) {
     final actor = currentAccount;
     final ticket = supportTickets.firstWhereOrNull(
       (item) => item.status != 'closed',
@@ -932,8 +935,9 @@ class DemoStore extends GetxController {
         id: _nextId('msg'),
         ticketId: ticket.id,
         authorId: actor?.id ?? 'u-fac-001',
-        message:
-            'Your request has been reviewed in demo mode. Please check the updated portal record.',
+        message: message?.trim().isNotEmpty == true
+            ? message!.trim()
+            : 'Your request has been reviewed. Please check the updated portal record.',
         createdAt: DateTime.now(),
       ),
     );
@@ -1009,6 +1013,56 @@ class DemoStore extends GetxController {
     _persist();
   }
 
+  void publishNotice({
+    required String title,
+    required String body,
+    required String target,
+    String? sectionId,
+  }) {
+    final actor = currentAccount;
+    if (actor == null) {
+      throw StateError('No account is signed in.');
+    }
+    final notice = DemoNotice(
+      id: _nextId('notice'),
+      title: title.trim(),
+      body: body.trim(),
+      authorId: actor.id,
+      target: target,
+      publishedAt: DateTime.now(),
+      sectionId: sectionId,
+    );
+    notices.insert(0, notice);
+
+    final recipients = <String>{};
+    if (sectionId != null && sectionId.isNotEmpty) {
+      recipients.addAll(
+        enrollments
+            .where((enrollment) => enrollment.sectionId == sectionId)
+            .map((enrollment) => enrollment.studentId),
+      );
+    } else {
+      for (final account in accounts) {
+        if (target == 'all' || account.role.code == target) {
+          recipients.add(account.id);
+        }
+      }
+    }
+    for (final recipient in recipients) {
+      addNotification(
+        userId: recipient,
+        title: 'New notice published',
+        body: notice.title,
+      );
+    }
+    addActivity(
+      actorId: actor.id,
+      title: 'Notice published',
+      detail: '${actor.fullName} published ${notice.title}.',
+    );
+    _persist();
+  }
+
   void toggleFirstUserActive() {
     final user = accounts.firstWhereOrNull((account) {
       return account.role == PortalRole.student &&
@@ -1021,7 +1075,7 @@ class DemoStore extends GetxController {
     addActivity(
       actorId: currentAccount?.id ?? 'u-adm-001',
       title: user.active ? 'User activated' : 'User deactivated',
-      detail: '${user.fullName} account status changed in demo mode.',
+      detail: '${user.fullName} account status changed.',
     );
     _persist();
   }
@@ -1111,7 +1165,7 @@ class DemoStore extends GetxController {
           StaticMetric(
             label: 'Tuition due',
             value: _money(totalDueForStudent(account?.id)),
-            note: 'Demo invoice balance',
+            note: 'Invoice balance',
             icon: Icons.payments_outlined,
           ),
           StaticMetric(
@@ -1184,7 +1238,7 @@ class DemoStore extends GetxController {
           StaticMetric(
             label: 'Students',
             value: '${studentAccounts.length}',
-            note: 'Active demo records',
+            note: 'Active records',
             icon: Icons.groups_outlined,
           ),
           StaticMetric(
@@ -1223,13 +1277,13 @@ class DemoStore extends GetxController {
           StaticMetric(
             label: 'Students',
             value: '${studentAccounts.length}',
-            note: 'Demo records',
+            note: 'Active records',
             icon: Icons.groups_outlined,
           ),
           StaticMetric(
             label: 'Teachers',
             value: '${teacherAccounts.length}',
-            note: 'Demo records',
+            note: 'Active records',
             icon: Icons.co_present_outlined,
           ),
           StaticMetric(
@@ -1259,7 +1313,7 @@ class DemoStore extends GetxController {
           StaticMetric(
             label: 'Events',
             value: '${events.length}',
-            note: 'Published/demo',
+            note: 'Published records',
             icon: Icons.event_outlined,
           ),
           StaticMetric(
@@ -1291,13 +1345,13 @@ class DemoStore extends GetxController {
     switch (action) {
       case 'Reset Demo Data':
         resetDemoData();
-        return 'Demo data has been reset to the original seed.';
+        return 'Local data has been reset to the original seed.';
       case 'Mark all notifications read':
         markAllNotificationsRead();
         return 'All notifications for this account are now read.';
       case 'Simulate demo payment':
         simulateDemoPayment();
-        return 'Demo payment posted and invoice balance updated.';
+        return 'Payment posted and invoice balance updated.';
       case 'Register next event':
         registerNextEvent();
         return 'Registered for the next available event.';
@@ -1305,14 +1359,12 @@ class DemoStore extends GetxController {
         joinFirstOpenClub();
         return 'Club membership updated.';
       case 'Create support ticket':
-        createSupportTicket();
-        return 'Support ticket created and visible to faculty/admin.';
+        return 'Open the support form to create a ticket.';
       case 'Reply to open ticket':
         replyFirstOpenSupportTicket();
         return 'Support reply sent to the requester.';
       case 'Create forum post':
-        createForumPost();
-        return 'Forum post created.';
+        return 'Open the discussion form to create a post.';
       case 'Report latest post':
         reportLatestForumPost();
         return 'Forum report created for admin moderation.';
@@ -1329,13 +1381,12 @@ class DemoStore extends GetxController {
         markTodayAttendanceForFirstTeacherSection();
         return 'Today attendance was marked for the first assigned section.';
       case 'Publish course notice':
-        addCourseNotice();
-        return 'Course notice published and notifications sent.';
+        return 'Open the notice form to publish an announcement.';
       case 'Toggle first student status':
         toggleFirstUserActive();
         return 'First student account status changed.';
       default:
-        return '$featureTitle is populated from local demo data.';
+        return '$featureTitle is populated from local data.';
     }
   }
 
@@ -1491,7 +1542,7 @@ class DemoStore extends GetxController {
     final cgpa = _cgpa(resultsRows);
     return _ModuleDetails(
       description:
-          'Complete local demo profile with editable contact-oriented data.',
+          'Complete local profile with editable contact-oriented data.',
       metrics: [
         StaticMetric(
           label: 'CGPA',
@@ -1520,7 +1571,7 @@ class DemoStore extends GetxController {
       ],
       records: [
         StaticRecord(
-          title: account?.fullName ?? 'Demo User',
+          title: account?.fullName ?? 'EUB User',
           subtitle: account?.email ?? '',
           meta: account?.universityId ?? '',
           status: account?.role.label ?? 'Student',
@@ -1538,8 +1589,8 @@ class DemoStore extends GetxController {
         StaticRecord(
           title: 'Emergency contact',
           subtitle: account?.emergencyContact ?? 'Not configured',
-          meta: account?.address ?? 'Address can be edited in demo state',
-          status: 'Local demo',
+          meta: account?.address ?? 'Address can be edited locally',
+          status: 'Local profile',
           icon: Icons.contact_phone_outlined,
         ),
       ],
@@ -1550,7 +1601,7 @@ class DemoStore extends GetxController {
     final sectionRows = visibleSectionsForRole(PortalRole.teacher);
     return _ModuleDetails(
       description:
-          'Teacher workspace calculated from assigned demo sections, submissions, quizzes, and attendance.',
+          'Teacher workspace calculated from assigned sections, submissions, quizzes, and attendance.',
       metrics: dashboardMetrics(PortalRole.teacher),
       records: sectionRows.map((section) {
         final subject = subjectForSection(section.id);
@@ -1572,8 +1623,8 @@ class DemoStore extends GetxController {
   _ModuleDetails _adminFacultyDetails(PortalRole role) {
     return _ModuleDetails(
       description: role == PortalRole.admin
-          ? 'Admin overview with live demo counts for users, approvals, moderation, support, and activities.'
-          : 'Faculty overview using the same demo students, teachers, routines, reports, and support tickets.',
+          ? 'Admin overview with live counts for users, approvals, moderation, support, and activities.'
+          : 'Faculty overview using the same students, teachers, routines, reports, and support tickets.',
       metrics: dashboardMetrics(role),
       records: [
         StaticRecord(
@@ -1613,7 +1664,7 @@ class DemoStore extends GetxController {
     final sectionRows = visibleSectionsForRole();
     return _ModuleDetails(
       description:
-          'Courses are resolved from demo enrollments and teacher assignments.',
+          'Courses are resolved from enrollments and teacher assignments.',
       metrics: [
         StaticMetric(
           label: 'Courses',
@@ -1686,7 +1737,7 @@ class DemoStore extends GetxController {
     final sectionRows = visibleSectionsForRole();
     return _ModuleDetails(
       description:
-          'Attendance is calculated from per-class demo history and shows missed days.',
+          'Attendance is calculated from per-class history and shows missed days.',
       metrics: [
         StaticMetric(
           label: 'Overall',
@@ -1741,7 +1792,7 @@ class DemoStore extends GetxController {
         StaticMetric(
           label: 'Records',
           value: '${attendance.length}',
-          note: 'Demo attendance rows',
+          note: 'Attendance rows',
           icon: Icons.how_to_reg_outlined,
         ),
       ],
@@ -1771,7 +1822,7 @@ class DemoStore extends GetxController {
         .length;
     return _ModuleDetails(
       description:
-          'Assignments, submissions, grading, and notifications are synchronized in local demo state.',
+          'Assignments, submissions, grading, and notifications are synchronized locally.',
       metrics: [
         StaticMetric(
           label: 'Assignments',
@@ -1903,7 +1954,7 @@ class DemoStore extends GetxController {
         : invoices;
     return _ModuleDetails(
       description:
-          'Demo invoices calculate subtotal, waiver, payment, and remaining due without a real gateway.',
+          'Invoices calculate subtotal, waiver, payment, and remaining due without a real gateway.',
       metrics: [
         StaticMetric(
           label: 'Invoices',
@@ -1977,7 +2028,7 @@ class DemoStore extends GetxController {
         StaticMetric(
           label: 'Events',
           value: '${events.length}',
-          note: 'Published/demo',
+          note: 'Published records',
           icon: Icons.event_outlined,
         ),
         StaticMetric(
@@ -2137,7 +2188,7 @@ class DemoStore extends GetxController {
         StaticMetric(
           label: 'Students',
           value: '${studentAccounts.length}',
-          note: 'Demo roster',
+          note: 'Student roster',
           icon: Icons.groups_outlined,
         ),
       ],
@@ -2162,7 +2213,7 @@ class DemoStore extends GetxController {
   _ModuleDetails _departmentDetails() {
     return _ModuleDetails(
       description:
-          'Department statistics are calculated from demo students, teachers, and courses.',
+          'Department statistics are calculated from students, teachers, and courses.',
       metrics: [
         StaticMetric(
           label: 'Departments',
@@ -2306,7 +2357,7 @@ class DemoStore extends GetxController {
     ];
     return _ModuleDetails(
       description:
-          'Lecture materials use meaningful metadata and are ready for demo upload/download flows.',
+          'Lecture materials use meaningful metadata and are ready for upload/download simulations.',
       metrics: [
         StaticMetric(
           label: 'Materials',
@@ -2359,13 +2410,13 @@ class DemoStore extends GetxController {
         StaticMetric(
           label: 'Users',
           value: '${accounts.length}',
-          note: 'All demo users',
+          note: 'All users',
           icon: Icons.manage_accounts_outlined,
         ),
         StaticMetric(
           label: 'Inactive',
           value: '${accounts.where((account) => !account.active).length}',
-          note: 'Demo state',
+          note: 'Local state',
           icon: Icons.block_outlined,
         ),
       ],
@@ -2387,7 +2438,7 @@ class DemoStore extends GetxController {
   _ModuleDetails _activityDetails() {
     return _ModuleDetails(
       description:
-          'System activity contains real seeded actions and grows when demo workflows run.',
+          'System activity contains seeded actions and grows when local workflows run.',
       metrics: [
         StaticMetric(
           label: 'Activity entries',
@@ -2413,7 +2464,7 @@ class DemoStore extends GetxController {
     final account = currentAccount;
     return _ModuleDetails(
       description:
-          'Settings includes demo credentials, notification state, and reset tools.',
+          'Settings includes credentials, notification state, and reset tools.',
       metrics: [
         StaticMetric(
           label: 'Unread',
@@ -2497,11 +2548,11 @@ class DemoStore extends GetxController {
 
   _ModuleDetails _generalDetails(String title) {
     return _ModuleDetails(
-      description: '$title uses the shared local demo university dataset.',
+      description: '$title uses the shared local university dataset.',
       metrics: dashboardMetrics(currentRole).take(4).toList(),
       records: [
         StaticRecord(
-          title: 'Demo data connected',
+          title: 'Local data connected',
           subtitle:
               'This screen reads calculated records from the local store.',
           meta: 'Presentation mode',

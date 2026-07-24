@@ -98,6 +98,7 @@ class AssignmentQuizRepository {
     required int durationMinutes,
     required DateTime opensAt,
     required DateTime closesAt,
+    required List<QuizDraftQuestion> questions,
   }) async {
     try {
       _store.publishQuiz(
@@ -108,6 +109,7 @@ class AssignmentQuizRepository {
         durationMinutes: durationMinutes,
         opensAt: opensAt,
         closesAt: closesAt,
+        questions: questions,
       );
       return const AppResult.success(null);
     } catch (error) {

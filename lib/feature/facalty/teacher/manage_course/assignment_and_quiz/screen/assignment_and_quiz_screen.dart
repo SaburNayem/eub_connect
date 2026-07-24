@@ -292,6 +292,16 @@ class AssignmentAndQuizScreen extends StatelessWidget {
     );
     final scheduleController = TextEditingController(text: 'Aug 6, 2026 10 AM');
     final marksController = TextEditingController(text: '15');
+    final formKey = GlobalKey<FormState>();
+    final questionControllers = [
+      TextEditingController(),
+      TextEditingController(),
+    ];
+    final optionControllers = [
+      List.generate(4, (_) => TextEditingController()),
+      List.generate(4, (_) => TextEditingController()),
+    ];
+    final correctIndexes = [0, 0];
 
     await showModalBottomSheet<void>(
       context: context,
@@ -311,88 +321,144 @@ class AssignmentAndQuizScreen extends StatelessWidget {
                 bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + 18,
               ),
               child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Publish quiz',
-                      style: TextStyle(
-                        color: AppColors.textDark,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Publish quiz',
+                        style: TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedSubject,
-                      decoration: const InputDecoration(
-                        labelText: 'Subject',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        for (final subject in controller.subjects)
-                          DropdownMenuItem(
-                            value: subject.sectionId,
-                            child: Text(
-                              '${subject.code}-${subject.section} | ${subject.name}',
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedSubject,
+                        decoration: const InputDecoration(
+                          labelText: 'Subject',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          for (final subject in controller.subjects)
+                            DropdownMenuItem(
+                              value: subject.sectionId,
+                              child: Text(
+                                '${subject.code}-${subject.section} | ${subject.name}',
+                              ),
                             ),
-                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => selectedSubject = value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Quiz title',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.length < 6) {
+                            return 'Enter a quiz title';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: scheduleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Schedule',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.isEmpty) {
+                            return 'Enter a schedule date';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: marksController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Total marks',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          final marks = int.tryParse(value ?? '');
+                          if (marks == null || marks <= 0 || marks > 100) {
+                            return 'Enter marks between 1 and 100';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      for (var index = 0; index < 2; index++) ...[
+                        _QuizQuestionDraftFields(
+                          index: index,
+                          questionController: questionControllers[index],
+                          optionControllers: optionControllers[index],
+                          correctIndex: correctIndexes[index],
+                          onCorrectChanged: (value) {
+                            setState(() => correctIndexes[index] = value);
+                          },
+                        ),
+                        const SizedBox(height: 12),
                       ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => selectedSubject = value);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Quiz title',
-                        border: OutlineInputBorder(),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          if (formKey.currentState?.validate() != true) {
+                            return;
+                          }
+                          final totalMarks =
+                              int.tryParse(marksController.text) ?? 15;
+                          final questionMarks =
+                              totalMarks / questionControllers.length;
+                          final questions = List.generate(
+                            questionControllers.length,
+                            (index) => QuizDraftQuestion(
+                              question: questionControllers[index].text,
+                              options: optionControllers[index]
+                                  .map((controller) => controller.text)
+                                  .toList(),
+                              correctIndex: correctIndexes[index],
+                              marks: questionMarks,
+                            ),
+                          );
+                          await controller.publishQuiz(
+                            subjectCode: selectedSubject,
+                            title: titleController.text,
+                            schedule: scheduleController.text,
+                            marks: totalMarks,
+                            questions: questions,
+                          );
+                          Get.back<void>();
+                          Get.snackbar(
+                            'Assignment & Quiz',
+                            'Quiz published for $selectedSubject',
+                            snackPosition: SnackPosition.BOTTOM,
+                            margin: const EdgeInsets.all(14),
+                            backgroundColor: AppColors.primary,
+                            colorText: AppColors.white,
+                          );
+                        },
+                        icon: const Icon(Icons.publish_outlined),
+                        label: const Text('Publish quiz'),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: scheduleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Schedule',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: marksController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Total marks',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: () async {
-                        await controller.publishQuiz(
-                          subjectCode: selectedSubject,
-                          title: titleController.text,
-                          schedule: scheduleController.text,
-                          marks: int.tryParse(marksController.text) ?? 15,
-                        );
-                        Get.back<void>();
-                        Get.snackbar(
-                          'Assignment & Quiz',
-                          'Quiz published for $selectedSubject',
-                          snackPosition: SnackPosition.BOTTOM,
-                          margin: const EdgeInsets.all(14),
-                          backgroundColor: AppColors.primary,
-                          colorText: AppColors.white,
-                        );
-                      },
-                      icon: const Icon(Icons.publish_outlined),
-                      label: const Text('Publish quiz'),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -404,6 +470,106 @@ class AssignmentAndQuizScreen extends StatelessWidget {
     titleController.dispose();
     scheduleController.dispose();
     marksController.dispose();
+    for (final controller in questionControllers) {
+      controller.dispose();
+    }
+    for (final controllers in optionControllers) {
+      for (final controller in controllers) {
+        controller.dispose();
+      }
+    }
+  }
+}
+
+class _QuizQuestionDraftFields extends StatelessWidget {
+  const _QuizQuestionDraftFields({
+    required this.index,
+    required this.questionController,
+    required this.optionControllers,
+    required this.correctIndex,
+    required this.onCorrectChanged,
+  });
+
+  final int index;
+  final TextEditingController questionController;
+  final List<TextEditingController> optionControllers;
+  final int correctIndex;
+  final ValueChanged<int> onCorrectChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE3E6EA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Question ${index + 1}',
+            style: const TextStyle(
+              color: AppColors.textDark,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: questionController,
+            decoration: const InputDecoration(
+              labelText: 'Question text',
+              border: OutlineInputBorder(),
+            ),
+            validator: (value) {
+              final text = value?.trim() ?? '';
+              if (text.length < 10) {
+                return 'Enter a meaningful question';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 10),
+          for (var option = 0; option < optionControllers.length; option++) ...[
+            TextFormField(
+              controller: optionControllers[option],
+              decoration: InputDecoration(
+                labelText: 'Option ${option + 1}',
+                border: const OutlineInputBorder(),
+              ),
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.length < 2) {
+                  return 'Enter option text';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+          DropdownButtonFormField<int>(
+            initialValue: correctIndex,
+            decoration: const InputDecoration(
+              labelText: 'Correct answer',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              for (var option = 0; option < optionControllers.length; option++)
+                DropdownMenuItem(
+                  value: option,
+                  child: Text('Option ${option + 1}'),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                onCorrectChanged(value);
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 

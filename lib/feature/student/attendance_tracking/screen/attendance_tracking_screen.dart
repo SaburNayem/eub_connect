@@ -31,7 +31,7 @@ class AttendanceTrackingScreen extends StatelessWidget {
             child: EmptyStatePanel(
               title: 'No attendance records',
               message:
-                  'This demo account does not have enrolled course attendance yet.',
+                  'This account does not have enrolled course attendance yet.',
               icon: Icons.how_to_reg_outlined,
             ),
           );

@@ -215,9 +215,87 @@ class DemoSeed {
             currentCredits: 15,
           );
         }).toList();
+    final generatedStudents = List.generate(160, (offset) {
+      final index = offset + 21;
+      final id = index.toString().padLeft(3, '0');
+      final firstNames = [
+        'Afsana',
+        'Mahin',
+        'Tanjim',
+        'Samiha',
+        'Imran',
+        'Nabila',
+        'Raihan',
+        'Faria',
+        'Shuvo',
+        'Muntaha',
+        'Rumana',
+        'Sakib',
+        'Ishrat',
+        'Sohan',
+        'Nadim',
+        'Mim',
+      ];
+      final lastNames = [
+        'Ahmed',
+        'Rahman',
+        'Islam',
+        'Hossain',
+        'Akter',
+        'Hasan',
+        'Karim',
+        'Chowdhury',
+        'Sultana',
+        'Mahmud',
+      ];
+      final name =
+          '${firstNames[offset % firstNames.length]} ${lastNames[(offset ~/ firstNames.length) % lastNames.length]}';
+      final departmentIds = [
+        'dept-cse',
+        'dept-cse',
+        'dept-eee',
+        'dept-bba',
+        'dept-eng',
+        'dept-ce',
+      ];
+      final departmentId = departmentIds[offset % departmentIds.length];
+      final program = switch (departmentId) {
+        'dept-eee' => 'B.Sc. in EEE',
+        'dept-bba' => 'BBA',
+        'dept-eng' => 'B.A. in English',
+        'dept-ce' => 'B.Sc. in Civil Engineering',
+        _ => 'B.Sc. in CSE',
+      };
+      return DemoAccount(
+        id: 'u-stu-$id',
+        universityId: '2023001$id',
+        email: '${name.toLowerCase().replaceAll(' ', '.')}.$id@eub.edu.bd',
+        password: '123456',
+        fullName: name,
+        role: PortalRole.student,
+        departmentId: departmentId,
+        program: program,
+        semester: offset % 3 == 0
+            ? 'Spring 2026'
+            : offset % 3 == 1
+            ? 'Summer 2026'
+            : 'Fall 2025',
+        section: offset.isEven ? '6A' : '5B',
+        batch: '${22 + (offset % 4)}',
+        phone: '+88017${(20000000 + index * 1973).toString().substring(1)}',
+        address:
+            'House ${20 + index % 90}, Road ${1 + index % 18}, ${index.isEven ? 'Uttara' : 'Mirpur'}, Dhaka',
+        emergencyContact:
+            '+88018${(30000000 + index * 2141).toString().substring(1)}',
+        cgpa: 2.75 + (index % 11) * 0.10,
+        completedCredits: 42 + (index % 80),
+        currentCredits: 12 + (index % 3) * 3,
+      );
+    });
 
     return [
       ...students,
+      ...generatedStudents,
       DemoAccount(
         id: 'u-tea-001',
         universityId: 'T1001',
@@ -597,14 +675,26 @@ class DemoSeed {
       'sec-mat205-6a',
     ];
     final eee = ['sec-eee201-6a', 'sec-eee305-5b', 'sec-mat205-6a'];
+    final bba = ['sec-bus201-1a', 'sec-bus321-3a', 'sec-sta301-3a'];
+    final english = ['sec-eng205-6a', 'sec-bus201-1a'];
+    final civil = ['sec-ce211-2a', 'sec-mat205-6a'];
 
-    for (var student = 1; student <= 20; student++) {
+    for (var student = 1; student <= 180; student++) {
       final studentId = 'u-stu-${student.toString().padLeft(3, '0')}';
       final sectionIds = student <= 12
           ? springCse
           : student <= 16
           ? mixedCse
-          : eee;
+          : student <= 20
+          ? eee
+          : switch (student % 6) {
+              0 => bba,
+              1 => springCse,
+              2 => mixedCse,
+              3 => eee,
+              4 => english,
+              _ => civil,
+            };
       for (final sectionId in sectionIds) {
         enrollments.add(
           DemoEnrollment(
@@ -2232,6 +2322,37 @@ class DemoSeed {
         paid: 46500,
         dueDate: DateTime(2026, 8, 10),
       ),
+      ...List.generate(77, (offset) {
+        final studentNo = offset + 5;
+        final studentId = 'u-stu-${studentNo.toString().padLeft(3, '0')}';
+        final subtotal = 48500 + (offset % 6) * 2500;
+        final labFee = offset % 2 == 0 ? 3500 : 2500;
+        final totalBeforeWaiver = 8000 + (subtotal - 13000) + labFee + 1500;
+        final waiver = offset % 4 == 0
+            ? 6000
+            : offset % 7 == 0
+            ? 3500
+            : 0;
+        final paid = offset % 5 == 0
+            ? totalBeforeWaiver - waiver
+            : offset % 3 == 0
+            ? 25000
+            : 15000 + (offset % 4) * 5000;
+        return DemoInvoice(
+          id: 'inv-${(offset + 4).toString().padLeft(3, '0')}',
+          studentId: studentId,
+          semester: offset.isEven ? 'Spring 2026' : 'Summer 2026',
+          items: {
+            'Semester fee': 8000,
+            'Credit fee': subtotal - 13000,
+            'Lab fee': labFee,
+            'Library fee': 1500,
+          },
+          waiver: waiver,
+          paid: paid,
+          dueDate: DateTime(2026, 8, 10 + offset % 12),
+        );
+      }),
     ];
   }
 
@@ -2273,6 +2394,25 @@ class DemoSeed {
         paidAt: DateTime(2026, 7, 15),
         receiptNo: 'EUB-RCPT-260715-003',
       ),
+      ...List.generate(95, (offset) {
+        final studentNo = offset % 77 + 5;
+        final invoiceNo = offset % 77 + 4;
+        final amount = offset % 4 == 0
+            ? 12000
+            : offset % 4 == 1
+            ? 18000
+            : 24000;
+        return DemoPayment(
+          id: 'pay-${(offset + 5).toString().padLeft(3, '0')}',
+          invoiceId: 'inv-${invoiceNo.toString().padLeft(3, '0')}',
+          studentId: 'u-stu-${studentNo.toString().padLeft(3, '0')}',
+          amount: amount,
+          method: offset.isEven ? 'Bank deposit' : 'Card counter',
+          paidAt: DateTime(2026, 7, 1 + offset % 24),
+          receiptNo:
+              'EUB-RCPT-2607${(1 + offset % 24).toString().padLeft(2, '0')}-${(offset + 5).toString().padLeft(3, '0')}',
+        );
+      }),
     ];
   }
 
@@ -2341,6 +2481,40 @@ class DemoSeed {
         letterGrade: 'A+',
         gradePoint: 4.00,
       ),
+      ...List.generate(420, (offset) {
+        final studentNo = offset % 140 + 1;
+        final courseIds = [
+          'course-cse231',
+          'course-cse315',
+          'course-cse331',
+          'course-cse341',
+          'course-eee201',
+          'course-bus201',
+          'course-eng205',
+          'course-ce211',
+          'course-mat205',
+          'course-sta301',
+        ];
+        final marks = 62 + (offset * 7) % 31;
+        final grade = marks >= 80
+            ? ('A+', 4.00)
+            : marks >= 75
+            ? ('A', 3.75)
+            : marks >= 70
+            ? ('A-', 3.50)
+            : marks >= 65
+            ? ('B+', 3.25)
+            : ('B', 3.00);
+        return DemoResult(
+          id: 'res-${(offset + 8).toString().padLeft(3, '0')}',
+          studentId: 'u-stu-${studentNo.toString().padLeft(3, '0')}',
+          courseId: courseIds[offset % courseIds.length],
+          semester: offset % 2 == 0 ? 'Fall 2025' : 'Spring 2026',
+          marks: marks,
+          letterGrade: grade.$1,
+          gradePoint: grade.$2,
+        );
+      }),
     ];
   }
 
