@@ -1,8 +1,10 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
-import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_data.dart';
+import 'package:eub_connect/core/ui/state_panels.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_models.dart';
 import 'package:eub_connect/feature/student/assingment/controller/assingment_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class AssingmentScreen extends StatelessWidget {
   const AssingmentScreen({super.key});
@@ -26,6 +28,20 @@ class AssingmentScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: Obx(() {
+          final state = controller.workspace.value;
+          if (state.isLoading) {
+            return const LoadingPanel();
+          }
+          if (state.error != null) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: ErrorStatePanel(
+                message: state.error!,
+                onRetry: controller.load,
+              ),
+            );
+          }
+
           final assignments = controller.assignments;
 
           return SingleChildScrollView(
@@ -76,12 +92,8 @@ class AssingmentScreen extends StatelessWidget {
     CourseAssignment assignment,
     AssignmentSubmission? submission,
   ) async {
-    final subject = subjectForCode(assignment.subjectCode);
-    final defaultFileName =
-        '${assignment.subjectCode.replaceAll(' ', '_').toLowerCase()}_${assignment.id}.pdf';
-    final fileController = TextEditingController(
-      text: submission?.fileName ?? defaultFileName,
-    );
+    final subject = assignment.subject;
+    final fileController = TextEditingController();
     final noteController = TextEditingController(text: submission?.note ?? '');
 
     await showModalBottomSheet<void>(
@@ -124,7 +136,7 @@ class AssingmentScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            '${subject.code} | Due ${assignment.dueDate}',
+                            '${subject.code} | Due ${_formatDate(assignment.dueAt)}',
                             style: const TextStyle(
                               color: Color(0xFF667085),
                               fontWeight: FontWeight.w700,
@@ -158,8 +170,8 @@ class AssingmentScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
-                  onPressed: () {
-                    controller.submitAssignment(
+                  onPressed: () async {
+                    await controller.submitAssignment(
                       assignment: assignment,
                       fileName: fileController.text,
                       note: noteController.text,
@@ -263,7 +275,7 @@ class _StudentAssignmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subject = subjectForCode(assignment.subjectCode);
+    final subject = assignment.subject;
     final submitted = submission != null;
     final statusColor = submitted
         ? submission!.status.toLowerCase() == 'reviewed'
@@ -329,7 +341,9 @@ class _StudentAssignmentCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            assignment.description,
+            assignment.instructions.isEmpty
+                ? 'No additional instructions provided.'
+                : assignment.instructions,
             style: const TextStyle(color: Color(0xFF475467), height: 1.45),
           ),
           const SizedBox(height: 12),
@@ -339,7 +353,7 @@ class _StudentAssignmentCard extends StatelessWidget {
             children: [
               _InfoChip(
                 icon: Icons.event_outlined,
-                label: 'Due ${assignment.dueDate}',
+                label: 'Due ${_formatDate(assignment.dueAt)}',
               ),
               _InfoChip(
                 icon: Icons.grade_outlined,
@@ -347,17 +361,11 @@ class _StudentAssignmentCard extends StatelessWidget {
               ),
               _InfoChip(
                 icon: Icons.description_outlined,
-                label: assignment.resourceLabel,
+                label: assignment.allowResubmission
+                    ? 'Resubmission allowed'
+                    : 'Single submission',
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: assignment.requirements
-                .map((item) => _RequirementChip(label: item))
-                .toList(),
           ),
           if (submission != null) ...[
             const SizedBox(height: 14),
@@ -373,7 +381,7 @@ class _StudentAssignmentCard extends StatelessWidget {
                 onPressed: () {
                   Get.snackbar(
                     'Assignments',
-                    '${assignment.resourceLabel} is ready in demo data',
+                    'Teacher resources appear here after files are attached.',
                     snackPosition: SnackPosition.BOTTOM,
                     margin: const EdgeInsets.all(14),
                   );
@@ -421,7 +429,7 @@ class _SubmissionPanel extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  submission.fileName,
+                  submission.status,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w900),
@@ -431,7 +439,9 @@ class _SubmissionPanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Posted ${submission.submittedAt}',
+            submission.submittedAt == null
+                ? 'Not submitted yet'
+                : 'Posted ${_formatDateTime(submission.submittedAt!)}',
             style: const TextStyle(color: Color(0xFF667085), fontSize: 12),
           ),
           if (submission.note.isNotEmpty) ...[
@@ -484,9 +494,9 @@ class _SubjectFilter extends StatelessWidget {
         for (final subject in subjects)
           ChoiceChip(
             avatar: CircleAvatar(backgroundColor: subject.color, radius: 5),
-            label: Text(subject.code),
-            selected: selectedCode == subject.code,
-            onSelected: (_) => onSelected(subject.code),
+            label: Text('${subject.code}-${subject.section}'),
+            selected: selectedCode == subject.sectionId,
+            onSelected: (_) => onSelected(subject.sectionId),
           ),
       ],
     );
@@ -660,31 +670,6 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
-class _RequirementChip extends StatelessWidget {
-  const _RequirementChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(
-          Icons.check_circle_outline,
-          size: 16,
-          color: AppColors.secondary,
-        ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: const TextStyle(color: Color(0xFF475467), fontSize: 12),
-        ),
-      ],
-    );
-  }
-}
-
 class _EmptyPanel extends StatelessWidget {
   const _EmptyPanel({required this.message});
 
@@ -702,4 +687,12 @@ class _EmptyPanel extends StatelessWidget {
       child: Text(message, style: const TextStyle(color: Color(0xFF667085))),
     );
   }
+}
+
+String _formatDate(DateTime value) {
+  return DateFormat('MMM d, yyyy').format(value);
+}
+
+String _formatDateTime(DateTime value) {
+  return DateFormat('MMM d, yyyy h:mm a').format(value);
 }

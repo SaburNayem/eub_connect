@@ -19,7 +19,7 @@ class AuthScreen extends StatelessWidget {
 
   final AuthController _controller = Get.put(AuthController());
 
-  void _openStaticApp() {
+  void _openAuthenticatedApp() {
     Get.offAllNamed(AppRoutes.home);
   }
 
@@ -50,11 +50,11 @@ class AuthScreen extends StatelessWidget {
                           child: _controller.showRegister.value
                               ? RegistrationScreen(
                                   key: const ValueKey('register'),
-                                  onAuthenticated: _openStaticApp,
+                                  onAuthenticated: _openAuthenticatedApp,
                                 )
                               : LoginScreen(
                                   key: const ValueKey('login'),
-                                  onAuthenticated: _openStaticApp,
+                                  onAuthenticated: _openAuthenticatedApp,
                                 ),
                         ),
                       ],

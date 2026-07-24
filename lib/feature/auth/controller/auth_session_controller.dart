@@ -1,31 +1,85 @@
-import 'package:eub_connect/feature/auth/model/static_account.dart';
+import 'package:eub_connect/core/backend/app_failure.dart';
+import 'package:eub_connect/feature/auth/model/app_account.dart';
 import 'package:eub_connect/feature/auth/registration/model/registration_model.dart';
+import 'package:eub_connect/feature/auth/repository/auth_repository.dart';
 import 'package:eub_connect/feature/home/model/static_feature.dart';
 import 'package:get/get.dart';
 
 class AuthSessionController extends GetxController {
-  final currentAccount = Rxn<StaticAccount>();
+  AuthSessionController({AuthRepository? repository})
+    : _repository = repository ?? AuthRepository();
 
-  StaticAccount get account => currentAccount.value ?? staticAccounts.first;
+  final AuthRepository _repository;
+  final currentAccount = Rxn<AppAccount>();
+  final isLoading = false.obs;
+  final lastError = RxnString();
+
+  AppAccount get account => currentAccount.value ?? AppAccount.guest;
 
   PortalRole get role => account.role;
 
-  void signIn(StaticAccount account) {
-    currentAccount.value = account;
+  bool get isAuthenticated => currentAccount.value != null;
+
+  Future<bool> restoreSession() async {
+    isLoading.value = true;
+    lastError.value = null;
+    final result = await _repository.restoreSession();
+    isLoading.value = false;
+
+    if (result.isSuccess) {
+      currentAccount.value = result.requireData;
+      return true;
+    }
+
+    if (result.failure?.type != AppFailureType.authentication) {
+      lastError.value = result.failure?.message;
+    }
+    currentAccount.value = null;
+    return false;
   }
 
-  void register(RegistrationModel data) {
-    currentAccount.value = StaticAccount(
-      id: data.userId,
+  Future<bool> signIn({required String email, required String password}) async {
+    isLoading.value = true;
+    lastError.value = null;
+    final result = await _repository.signIn(email: email, password: password);
+    isLoading.value = false;
+
+    if (result.isSuccess) {
+      currentAccount.value = result.requireData;
+      return true;
+    }
+
+    lastError.value = result.failure?.message;
+    return false;
+  }
+
+  Future<bool> registerStudent(RegistrationModel data) async {
+    isLoading.value = true;
+    lastError.value = null;
+    final result = await _repository.registerStudent(
+      universityId: data.userId,
       fullName: data.fullName,
       email: data.emailAddress,
       password: data.password,
-      role: data.role,
-      department: data.role.subtitle,
+      phone: data.phoneNumber,
     );
+    isLoading.value = false;
+
+    if (result.isSuccess) {
+      currentAccount.value = result.data;
+      if (result.data == null) {
+        lastError.value =
+            'Registration received. Please verify your email before login.';
+      }
+      return true;
+    }
+
+    lastError.value = result.failure?.message;
+    return false;
   }
 
-  void signOut() {
+  Future<void> signOut() async {
+    await _repository.signOut();
     currentAccount.value = null;
   }
 }

@@ -12,7 +12,6 @@ class RegistrationController extends GetxController {
   final emailAddressController = TextEditingController();
 
   final photoPath = RxnString();
-  final selectedRole = PortalRole.student.obs;
 
   RegistrationModel get registrationData {
     return RegistrationModel(
@@ -21,7 +20,7 @@ class RegistrationController extends GetxController {
       password: passwordController.text,
       phoneNumber: phoneNumberController.text.trim(),
       emailAddress: emailAddressController.text.trim(),
-      role: selectedRole.value,
+      role: PortalRole.student,
       photoPath: photoPath.value,
     );
   }
@@ -30,12 +29,8 @@ class RegistrationController extends GetxController {
     return formKey.currentState?.validate() ?? false;
   }
 
-  void selectDemoPhoto() {
-    photoPath.value = 'selected_profile_photo';
-  }
-
-  void setRole(PortalRole role) {
-    selectedRole.value = role;
+  void markPhotoSelected() {
+    photoPath.value = 'pending_upload';
   }
 
   @override

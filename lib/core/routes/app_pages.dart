@@ -136,10 +136,7 @@ class AppPages {
       name: AppRoutes.studentClubCommunity,
       page: () => const ClubCommunityScreen(),
     ),
-    GetPage(
-      name: AppRoutes.studentEvents,
-      page: () => const EventScreen(),
-    ),
+    GetPage(name: AppRoutes.studentEvents, page: () => const EventScreen()),
     GetPage(
       name: AppRoutes.studentExamResults,
       page: () => const ExamResultScreen(),
@@ -148,10 +145,7 @@ class AppPages {
       name: AppRoutes.studentPaymentHistory,
       page: () => const PaymentHistoryScreen(),
     ),
-    GetPage(
-      name: AppRoutes.studentProfile,
-      page: () => const ProfileScreen(),
-    ),
+    GetPage(name: AppRoutes.studentProfile, page: () => const ProfileScreen()),
     GetPage(
       name: AppRoutes.studentQuizPractice,
       page: () => const QuizPracticeScreen(),

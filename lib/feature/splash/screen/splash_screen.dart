@@ -1,5 +1,6 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
 import 'package:eub_connect/core/routes/app_routes.dart';
+import 'package:eub_connect/feature/auth/controller/auth_session_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -14,9 +15,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 1300), () {
+    Future<void>.delayed(const Duration(milliseconds: 800), () async {
       if (!mounted) return;
-      Get.offAllNamed(AppRoutes.auth);
+      final restored = await ensureAuthSession().restoreSession();
+      if (!mounted) return;
+      Get.offAllNamed(restored ? AppRoutes.home : AppRoutes.auth);
     });
   }
 

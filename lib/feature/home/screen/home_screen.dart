@@ -1,31 +1,38 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
+import 'package:eub_connect/core/data/async_value.dart';
 import 'package:eub_connect/core/routes/app_routes.dart';
+import 'package:eub_connect/core/ui/state_panels.dart';
 import 'package:eub_connect/feature/auth/controller/auth_session_controller.dart';
-import 'package:eub_connect/feature/auth/model/static_account.dart';
+import 'package:eub_connect/feature/auth/model/app_account.dart';
 import 'package:eub_connect/feature/home/model/static_feature.dart';
+import 'package:eub_connect/feature/home/repository/dashboard_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class HomeController extends GetxController {
   final AuthSessionController _session = ensureAuthSession();
+  final DashboardRepository _dashboardRepository = DashboardRepository();
   final activeRole = PortalRole.student.obs;
   final selectedFeatureIndex = (-1).obs;
   final selectedNavigationGroupIndex = 0.obs;
   final selectedBottomNavigationIndex = 0.obs;
   final navigationQuery = ''.obs;
+  final dashboardMetrics = const AsyncValue<List<StaticMetric>>.loading().obs;
 
-  StaticAccount get account => _session.account;
+  AppAccount get account => _session.account;
 
   @override
   void onInit() {
     super.onInit();
     activeRole.value = _session.role;
+    loadDashboardMetrics();
     ever(_session.currentAccount, (_) {
       activeRole.value = _session.role;
       selectedFeatureIndex.value = -1;
       selectedNavigationGroupIndex.value = 0;
       selectedBottomNavigationIndex.value = 0;
       navigationQuery.value = '';
+      loadDashboardMetrics();
     });
   }
 
@@ -216,10 +223,23 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<void> loadDashboardMetrics() async {
+    dashboardMetrics.value = const AsyncValue.loading();
+    final result = await _dashboardRepository.loadMetrics(activeRole.value);
+    if (result.isSuccess) {
+      dashboardMetrics.value = AsyncValue.data(result.requireData);
+      return;
+    }
+
+    dashboardMetrics.value = AsyncValue.error(
+      result.failure?.message ?? 'Unable to load dashboard metrics.',
+    );
+  }
+
   void showMessage(String label) {
     Get.snackbar(
       'EUB Connect',
-      '$label is ready in the demo',
+      '$label requires a configured backend record or permission.',
       snackPosition: SnackPosition.BOTTOM,
       margin: const EdgeInsets.all(14),
       backgroundColor: AppColors.primary,
@@ -228,8 +248,8 @@ class HomeController extends GetxController {
     );
   }
 
-  void signOut() {
-    _session.signOut();
+  Future<void> signOut() async {
+    await _session.signOut();
     Get.offAllNamed(AppRoutes.auth);
   }
 }
@@ -250,6 +270,7 @@ class HomeScreen extends StatelessWidget {
       final selectedBottomNavigationIndex =
           _controller.selectedBottomNavigationIndex.value;
       final dashboardProfile = _controller.dashboardProfile;
+      final dashboardMetricState = _controller.dashboardMetrics.value;
       final accessibleFeatures = _controller.accessibleFeatures;
       final navigationQuery = _controller.navigationQuery.value;
       final account = _controller.account;
@@ -386,6 +407,7 @@ class HomeScreen extends StatelessWidget {
                                     key: ValueKey(activeRole),
                                     profile: dashboardProfile,
                                     accessibleFeatures: dashboardFeatures,
+                                    metricsState: dashboardMetricState,
                                     featureTitle: 'Role Features',
                                     featureSubtitle:
                                         '${accessibleFeatures.length} features available for ${dashboardProfile.role.label.toLowerCase()} access',
@@ -636,7 +658,7 @@ class _DesktopTopBar extends StatelessWidget {
     required this.onLogout,
   });
 
-  final StaticAccount account;
+  final AppAccount account;
   final VoidCallback onProfileTap;
   final VoidCallback onNotificationsTap;
   final VoidCallback onLogout;
@@ -701,7 +723,7 @@ class _DesktopTopBar extends StatelessWidget {
 class _AccountBadge extends StatelessWidget {
   const _AccountBadge({required this.account});
 
-  final StaticAccount account;
+  final AppAccount account;
 
   @override
   Widget build(BuildContext context) {
@@ -753,7 +775,7 @@ class _AccountBadge extends StatelessWidget {
 class _MobileAccountStrip extends StatelessWidget {
   const _MobileAccountStrip({required this.account});
 
-  final StaticAccount account;
+  final AppAccount account;
 
   @override
   Widget build(BuildContext context) {
@@ -821,7 +843,7 @@ class _NavigationPanel extends StatelessWidget {
     required this.onLogout,
   });
 
-  final StaticAccount account;
+  final AppAccount account;
   final PortalRole activeRole;
   final int selectedFeatureIndex;
   final int selectedNavigationGroupIndex;
@@ -989,6 +1011,7 @@ class _DashboardView extends StatelessWidget {
   const _DashboardView({
     required this.profile,
     required this.accessibleFeatures,
+    required this.metricsState,
     required this.featureTitle,
     required this.featureSubtitle,
     required this.onFeatureTap,
@@ -997,6 +1020,7 @@ class _DashboardView extends StatelessWidget {
 
   final DashboardProfile profile;
   final List<StaticFeature> accessibleFeatures;
+  final AsyncValue<List<StaticMetric>> metricsState;
   final String featureTitle;
   final String featureSubtitle;
   final ValueChanged<String> onFeatureTap;
@@ -1017,7 +1041,10 @@ class _DashboardView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        _MetricGrid(metrics: profile.metrics, accent: profile.role.color),
+        _DashboardMetricStateView(
+          state: metricsState,
+          accent: profile.role.color,
+        ),
         const SizedBox(height: 18),
         _SectionHeader(title: featureTitle, subtitle: featureSubtitle),
         const SizedBox(height: 10),
@@ -1027,6 +1054,37 @@ class _DashboardView extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _DashboardMetricStateView extends StatelessWidget {
+  const _DashboardMetricStateView({required this.state, required this.accent});
+
+  final AsyncValue<List<StaticMetric>> state;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.isLoading) {
+      return const LoadingPanel();
+    }
+
+    final error = state.error;
+    if (error != null) {
+      return ErrorStatePanel(message: error);
+    }
+
+    final metrics = state.data ?? const <StaticMetric>[];
+    if (metrics.isEmpty) {
+      return const EmptyStatePanel(
+        title: 'No dashboard records yet',
+        message:
+            'When Supabase contains university records, dashboard metrics are calculated from those rows.',
+        icon: Icons.query_stats_outlined,
+      );
+    }
+
+    return _MetricGrid(metrics: metrics, accent: accent);
   }
 }
 
@@ -1141,7 +1199,15 @@ class _FeatureDetailView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        _MetricGrid(metrics: feature.metrics, accent: feature.accent),
+        if (feature.metrics.isEmpty)
+          EmptyStatePanel(
+            title: 'No records yet',
+            message:
+                '${feature.title} will display records after the related Supabase tables contain data.',
+            icon: feature.icon,
+          )
+        else
+          _MetricGrid(metrics: feature.metrics, accent: feature.accent),
       ],
     );
   }
@@ -1488,7 +1554,7 @@ class _FeatureLaunchGrid extends StatelessWidget {
 class _RoleSummary extends StatelessWidget {
   const _RoleSummary({required this.account});
 
-  final StaticAccount account;
+  final AppAccount account;
 
   @override
   Widget build(BuildContext context) {

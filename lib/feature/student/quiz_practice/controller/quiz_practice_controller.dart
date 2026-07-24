@@ -1,29 +1,42 @@
-import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_data.dart';
+import 'package:eub_connect/core/data/async_value.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_models.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/repository/assignment_quiz_repository.dart';
 import 'package:eub_connect/feature/student/quiz_practice/model/quiz_practice_model.dart';
 import 'package:get/get.dart';
 
 class QuizPracticeController extends GetxController {
+  QuizPracticeController({AssignmentQuizRepository? repository})
+    : _repository = repository ?? AssignmentQuizRepository();
+
+  final AssignmentQuizRepository _repository;
   final moduleStatus = 'Ready'.obs;
   final model = const QuizPracticeModel().obs;
   final selectedSubjectCode = 'all'.obs;
-  final attempts = demoQuizAttempts
-      .where((attempt) => attempt.studentId == currentStudentId)
-      .toList()
-      .obs;
+  final workspace = const AsyncValue<AssignmentQuizWorkspace>.loading().obs;
 
-  List<CourseSubject> get subjects => demoSubjects;
+  @override
+  void onInit() {
+    super.onInit();
+    load();
+  }
+
+  List<CourseSubject> get subjects => workspace.value.data?.subjects ?? [];
+
+  List<QuizAttempt> get attempts => workspace.value.data?.attempts ?? [];
 
   List<CourseQuiz> get quizzes {
     final selectedCode = selectedSubjectCode.value;
+    final allQuizzes = workspace.value.data?.quizzes ?? [];
     final filtered = selectedCode == 'all'
-        ? demoQuizzes
-        : demoQuizzes.where((quiz) => quiz.subjectCode == selectedCode);
+        ? allQuizzes
+        : allQuizzes.where((quiz) => quiz.subject.sectionId == selectedCode);
     return filtered.toList();
   }
 
   int get availableCount {
-    return demoQuizzes
-        .where((quiz) => quiz.status.toLowerCase() == 'open')
+    final allQuizzes = workspace.value.data?.quizzes ?? [];
+    return allQuizzes
+        .where((quiz) => quiz.status.toLowerCase() == 'published')
         .length;
   }
 
@@ -34,12 +47,24 @@ class QuizPracticeController extends GetxController {
       return 0;
     }
     return attempts
-        .map((attempt) => attempt.score)
+        .map((attempt) => attempt.score?.toInt() ?? 0)
         .reduce((value, item) => value > item ? value : item);
   }
 
   void selectSubject(String code) {
     selectedSubjectCode.value = code;
+  }
+
+  Future<void> load() async {
+    workspace.value = const AsyncValue.loading();
+    final result = await _repository.loadWorkspace();
+    if (result.isSuccess) {
+      workspace.value = AsyncValue.data(result.requireData);
+      return;
+    }
+    workspace.value = AsyncValue.error(
+      result.failure?.message ?? 'Unable to load quizzes.',
+    );
   }
 
   QuizAttempt? attemptFor(String quizId) {
@@ -51,24 +76,13 @@ class QuizPracticeController extends GetxController {
     return null;
   }
 
-  void submitQuiz(CourseQuiz quiz) {
-    final score = quiz.totalMarks > 18
-        ? quiz.totalMarks - 3
-        : quiz.totalMarks - 1;
-    final attempt = QuizAttempt(
-      quizId: quiz.id,
-      studentId: currentStudentId,
-      studentName: currentStudentName,
-      submittedAt: 'Just now',
-      score: score,
-      status: 'Submitted',
-    );
-    final existingIndex = attempts.indexWhere((item) => item.quizId == quiz.id);
-    if (existingIndex == -1) {
-      attempts.add(attempt);
-    } else {
-      attempts[existingIndex] = attempt;
+  Future<void> submitQuiz(CourseQuiz quiz) async {
+    final result = await _repository.submitQuizAttempt(quizId: quiz.id);
+    if (result.isSuccess) {
+      moduleStatus.value = 'Quiz submitted';
+      await load();
+      return;
     }
-    moduleStatus.value = 'Quiz submitted';
+    moduleStatus.value = result.failure?.message ?? 'Quiz submission failed';
   }
 }

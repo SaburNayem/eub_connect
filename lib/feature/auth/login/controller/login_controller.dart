@@ -1,4 +1,4 @@
-import 'package:eub_connect/feature/auth/model/static_account.dart';
+import 'package:eub_connect/feature/auth/controller/auth_session_controller.dart';
 import 'package:eub_connect/feature/auth/login/model/login_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -7,6 +7,7 @@ class LoginController extends GetxController {
   final formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final isSubmitting = false.obs;
 
   LoginModel get loginData {
     return LoginModel(
@@ -15,13 +16,23 @@ class LoginController extends GetxController {
     );
   }
 
-  StaticAccount? authenticate() {
-    final data = loginData;
-    return findStaticAccount(email: data.email, password: data.password);
-  }
-
   bool validate() {
     return formKey.currentState?.validate() ?? false;
+  }
+
+  Future<bool> submit() async {
+    if (!validate()) {
+      return false;
+    }
+
+    isSubmitting.value = true;
+    final data = loginData;
+    final success = await ensureAuthSession().signIn(
+      email: data.email,
+      password: data.password,
+    );
+    isSubmitting.value = false;
+    return success;
   }
 
   @override

@@ -1,27 +1,49 @@
-import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_data.dart';
+import 'package:eub_connect/core/data/async_value.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_models.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/repository/assignment_quiz_repository.dart';
 import 'package:eub_connect/feature/facalty/teacher/manage_course/assignment_and_quiz/model/assignment_and_quiz_model.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 enum TeacherWorkMode { assignments, quizzes }
 
 class AssignmentAndQuizController extends GetxController {
+  AssignmentAndQuizController({AssignmentQuizRepository? repository})
+    : _repository = repository ?? AssignmentQuizRepository();
+
+  final AssignmentQuizRepository _repository;
   final moduleStatus = 'Ready'.obs;
   final model = const AssignmentAndQuizModel().obs;
   final selectedMode = TeacherWorkMode.assignments.obs;
   final selectedSubjectCode = 'all'.obs;
-  final assignments = demoAssignments.toList().obs;
-  final submissions = demoAssignmentSubmissions.toList().obs;
-  final quizzes = demoQuizzes.toList().obs;
-  final quizAttempts = demoQuizAttempts.toList().obs;
+  final workspace = const AsyncValue<AssignmentQuizWorkspace>.loading().obs;
 
-  List<CourseSubject> get subjects => demoSubjects;
+  @override
+  void onInit() {
+    super.onInit();
+    load();
+  }
+
+  List<CourseSubject> get subjects => workspace.value.data?.subjects ?? [];
+
+  List<CourseAssignment> get assignments {
+    return workspace.value.data?.assignments ?? [];
+  }
+
+  List<AssignmentSubmission> get submissions {
+    return workspace.value.data?.submissions ?? [];
+  }
+
+  List<CourseQuiz> get quizzes => workspace.value.data?.quizzes ?? [];
+
+  List<QuizAttempt> get quizAttempts => workspace.value.data?.attempts ?? [];
 
   List<CourseAssignment> get filteredAssignments {
     final selectedCode = selectedSubjectCode.value;
     final filtered = selectedCode == 'all'
         ? assignments
         : assignments.where(
-            (assignment) => assignment.subjectCode == selectedCode,
+            (assignment) => assignment.subject.sectionId == selectedCode,
           );
     return filtered.toList();
   }
@@ -30,7 +52,7 @@ class AssignmentAndQuizController extends GetxController {
     final selectedCode = selectedSubjectCode.value;
     final filtered = selectedCode == 'all'
         ? quizzes
-        : quizzes.where((quiz) => quiz.subjectCode == selectedCode);
+        : quizzes.where((quiz) => quiz.subject.sectionId == selectedCode);
     return filtered.toList();
   }
 
@@ -42,12 +64,14 @@ class AssignmentAndQuizController extends GetxController {
 
   int get reviewedSubmissionCount {
     return submissions
-        .where((submission) => submission.status.toLowerCase() == 'reviewed')
+        .where((submission) => submission.status.toLowerCase() == 'graded')
         .length;
   }
 
   int get openQuizCount {
-    return quizzes.where((quiz) => quiz.status.toLowerCase() == 'open').length;
+    return quizzes
+        .where((quiz) => quiz.status.toLowerCase() == 'published')
+        .length;
   }
 
   void selectMode(TeacherWorkMode mode) {
@@ -56,6 +80,18 @@ class AssignmentAndQuizController extends GetxController {
 
   void selectSubject(String code) {
     selectedSubjectCode.value = code;
+  }
+
+  Future<void> load() async {
+    workspace.value = const AsyncValue.loading();
+    final result = await _repository.loadWorkspace();
+    if (result.isSuccess) {
+      workspace.value = AsyncValue.data(result.requireData);
+      return;
+    }
+    workspace.value = AsyncValue.error(
+      result.failure?.message ?? 'Unable to load class work.',
+    );
   }
 
   List<AssignmentSubmission> submissionsFor(String assignmentId) {
@@ -68,92 +104,77 @@ class AssignmentAndQuizController extends GetxController {
     return quizAttempts.where((attempt) => attempt.quizId == quizId).toList();
   }
 
-  void reviewSubmission(AssignmentSubmission submission) {
+  Future<void> reviewSubmission(AssignmentSubmission submission) async {
     final assignment = assignmentFor(submission.assignmentId);
     final marks = assignment == null
-        ? 10
+        ? 0
         : (assignment.totalMarks * 0.9).round();
-    final index = submissions.indexWhere((item) {
-      return item.assignmentId == submission.assignmentId &&
-          item.studentId == submission.studentId;
-    });
-    if (index == -1) {
+    final result = await _repository.gradeSubmission(
+      submissionId: submission.id,
+      marks: marks,
+      feedback: 'Reviewed and graded.',
+    );
+    if (result.isSuccess) {
+      moduleStatus.value = 'Submission reviewed';
+      await load();
       return;
     }
-
-    submissions[index] = submission.copyWith(
-      status: 'Reviewed',
-      marks: marks,
-      feedback: 'Reviewed from teacher panel. Improve examples if resubmitted.',
-    );
-    moduleStatus.value = 'Submission reviewed';
+    moduleStatus.value = result.failure?.message ?? 'Review failed';
   }
 
-  void publishAssignment({
+  Future<void> publishAssignment({
     required String subjectCode,
     required String title,
     required String dueDate,
     required int marks,
     required String description,
-  }) {
-    final id = 'as-new-${assignments.length + 1}';
-    assignments.insert(
-      0,
-      CourseAssignment(
-        id: id,
-        subjectCode: subjectCode,
-        title: title.trim().isEmpty ? 'New Assignment' : title.trim(),
-        description: description.trim().isEmpty
-            ? 'Complete the attached task and upload the answer file.'
-            : description.trim(),
-        dueDate: dueDate.trim().isEmpty ? 'Next class' : dueDate.trim(),
-        publishDate: 'Today',
-        totalMarks: marks,
-        status: 'Open',
-        requirements: const [
-          'Answer file',
-          'Short explanation',
-          'Student ID on cover page',
-        ],
-        resourceLabel: 'Teacher attachment.pdf',
-      ),
+  }) async {
+    final sectionId = subjectCode;
+    final result = await _repository.publishAssignment(
+      sectionId: sectionId,
+      title: title.trim().isEmpty ? 'New Assignment' : title.trim(),
+      instructions: description.trim().isEmpty
+          ? 'Complete the assignment and submit before the deadline.'
+          : description.trim(),
+      totalMarks: marks,
+      dueAt: _parseDate(dueDate) ?? DateTime.now().add(const Duration(days: 7)),
     );
-    selectedMode.value = TeacherWorkMode.assignments;
-    selectedSubjectCode.value = subjectCode;
-    moduleStatus.value = 'Assignment published';
+    if (result.isSuccess) {
+      selectedMode.value = TeacherWorkMode.assignments;
+      selectedSubjectCode.value = sectionId;
+      moduleStatus.value = 'Assignment published';
+      await load();
+      return;
+    }
+    moduleStatus.value = result.failure?.message ?? 'Publish failed';
   }
 
-  void publishQuiz({
+  Future<void> publishQuiz({
     required String subjectCode,
     required String title,
     required String schedule,
     required int marks,
-  }) {
-    final id = 'q-new-${quizzes.length + 1}';
-    quizzes.insert(
-      0,
-      CourseQuiz(
-        id: id,
-        subjectCode: subjectCode,
-        title: title.trim().isEmpty ? 'New Quiz' : title.trim(),
-        description: 'Teacher-created quiz with static demo questions.',
-        schedule: schedule.trim().isEmpty ? 'Next class' : schedule.trim(),
-        duration: '15 min',
-        totalMarks: marks,
-        questionCount: 5,
-        status: 'Open',
-        questions: const [
-          QuizQuestion(
-            question: 'Sample teacher question?',
-            options: ['Option A', 'Option B', 'Option C', 'Option D'],
-            answer: 'Option A',
-          ),
-        ],
-      ),
+  }) async {
+    final sectionId = subjectCode;
+    final opensAt =
+        _parseDate(schedule) ?? DateTime.now().add(const Duration(days: 1));
+    final result = await _repository.publishQuiz(
+      sectionId: sectionId,
+      title: title.trim().isEmpty ? 'New Quiz' : title.trim(),
+      instructions: 'Answer all questions before the timer ends.',
+      totalMarks: marks,
+      durationMinutes: 15,
+      opensAt: opensAt,
+      closesAt: opensAt.add(const Duration(hours: 2)),
     );
-    selectedMode.value = TeacherWorkMode.quizzes;
-    selectedSubjectCode.value = subjectCode;
-    moduleStatus.value = 'Quiz published';
+    if (result.isSuccess) {
+      selectedMode.value = TeacherWorkMode.quizzes;
+      selectedSubjectCode.value = sectionId;
+      moduleStatus.value = 'Quiz published';
+      await load();
+      return;
+    }
+    moduleStatus.value = result.failure?.message ?? 'Quiz publish failed';
   }
 
   CourseAssignment? assignmentFor(String assignmentId) {
@@ -163,5 +184,25 @@ class AssignmentAndQuizController extends GetxController {
       }
     }
     return null;
+  }
+
+  DateTime? _parseDate(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(trimmed) ??
+        _tryFormat(trimmed, 'MMM d, yyyy h a') ??
+        _tryFormat(trimmed, 'MMM d, yyyy') ??
+        _tryFormat(trimmed, 'yyyy-MM-dd HH:mm') ??
+        _tryFormat(trimmed, 'yyyy-MM-dd');
+  }
+
+  DateTime? _tryFormat(String value, String pattern) {
+    try {
+      return DateFormat(pattern).parseStrict(value);
+    } catch (_) {
+      return null;
+    }
   }
 }

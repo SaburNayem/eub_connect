@@ -1,8 +1,10 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
-import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_data.dart';
+import 'package:eub_connect/core/ui/state_panels.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_models.dart';
 import 'package:eub_connect/feature/student/quiz_practice/controller/quiz_practice_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class QuizPracticeScreen extends StatelessWidget {
   const QuizPracticeScreen({super.key});
@@ -26,6 +28,20 @@ class QuizPracticeScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: Obx(() {
+          final state = controller.workspace.value;
+          if (state.isLoading) {
+            return const LoadingPanel();
+          }
+          if (state.error != null) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: ErrorStatePanel(
+                message: state.error!,
+                onRetry: controller.load,
+              ),
+            );
+          }
+
           final quizzes = controller.quizzes;
 
           return SingleChildScrollView(
@@ -71,9 +87,13 @@ class QuizPracticeScreen extends StatelessWidget {
     QuizPracticeController controller,
     CourseQuiz quiz,
   ) {
-    final subject = subjectForCode(quiz.subjectCode);
+    final subject = quiz.subject;
     final attempt = controller.attemptFor(quiz.id);
-    final canSubmit = quiz.status.toLowerCase() == 'open';
+    final now = DateTime.now();
+    final canSubmit =
+        quiz.status.toLowerCase() == 'published' &&
+        !now.isBefore(quiz.opensAt) &&
+        !now.isAfter(quiz.closesAt);
 
     return showModalBottomSheet<void>(
       context: context,
@@ -114,7 +134,7 @@ class QuizPracticeScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${subject.code} | ${quiz.duration} | ${quiz.totalMarks} marks',
+                            '${subject.code} | ${quiz.durationMinutes} min | ${quiz.totalMarks} marks',
                             style: const TextStyle(
                               color: Color(0xFF667085),
                               fontWeight: FontWeight.w700,
@@ -127,7 +147,9 @@ class QuizPracticeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  quiz.description,
+                  quiz.instructions.isEmpty
+                      ? 'No additional quiz instructions provided.'
+                      : quiz.instructions,
                   style: const TextStyle(color: Color(0xFF475467), height: 1.4),
                 ),
                 const SizedBox(height: 16),
@@ -143,8 +165,8 @@ class QuizPracticeScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: canSubmit
-                      ? () {
-                          controller.submitQuiz(quiz);
+                      ? () async {
+                          await controller.submitQuiz(quiz);
                           Get.back<void>();
                           Get.snackbar(
                             'Quiz Practice',
@@ -157,7 +179,7 @@ class QuizPracticeScreen extends StatelessWidget {
                         }
                       : null,
                   icon: const Icon(Icons.check_circle_outline),
-                  label: Text(attempt == null ? 'Submit quiz' : 'Retake demo'),
+                  label: Text(attempt == null ? 'Submit quiz' : 'Submit again'),
                 ),
               ],
             ),
@@ -240,11 +262,11 @@ class _QuizCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subject = subjectForCode(quiz.subjectCode);
+    final subject = quiz.subject;
     final attempted = attempt != null;
     final statusColor = attempted
         ? AppColors.secondary
-        : quiz.status.toLowerCase() == 'open'
+        : quiz.status.toLowerCase() == 'published'
         ? AppColors.primary
         : quiz.status.toLowerCase() == 'draft'
         ? const Color(0xFF667085)
@@ -304,7 +326,9 @@ class _QuizCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            quiz.description,
+            quiz.instructions.isEmpty
+                ? 'No additional quiz instructions provided.'
+                : quiz.instructions,
             style: const TextStyle(color: Color(0xFF475467), height: 1.45),
           ),
           const SizedBox(height: 12),
@@ -312,11 +336,17 @@ class _QuizCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _InfoChip(icon: Icons.event_outlined, label: quiz.schedule),
-              _InfoChip(icon: Icons.timer_outlined, label: quiz.duration),
+              _InfoChip(
+                icon: Icons.event_outlined,
+                label: _formatDateTime(quiz.opensAt),
+              ),
+              _InfoChip(
+                icon: Icons.timer_outlined,
+                label: '${quiz.durationMinutes} min',
+              ),
               _InfoChip(
                 icon: Icons.help_outline,
-                label: '${quiz.questionCount} questions',
+                label: '${quiz.questions.length} questions',
               ),
               _InfoChip(
                 icon: Icons.grade_outlined,
@@ -372,7 +402,7 @@ class _QuestionPreview extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: question.options
-                .map((option) => _RequirementChip(label: option))
+                .map((option) => _RequirementChip(label: option.text))
                 .toList(),
           ),
         ],
@@ -385,7 +415,7 @@ class _AttemptPanel extends StatelessWidget {
   const _AttemptPanel({required this.attempt, required this.totalMarks});
 
   final QuizAttempt attempt;
-  final int totalMarks;
+  final num totalMarks;
 
   @override
   Widget build(BuildContext context) {
@@ -402,7 +432,8 @@ class _AttemptPanel extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Score ${attempt.score}/$totalMarks | ${attempt.submittedAt}',
+              'Score ${attempt.score ?? '-'} / $totalMarks'
+              '${attempt.submittedAt == null ? '' : ' | ${_formatDateTime(attempt.submittedAt!)}'}',
               style: const TextStyle(
                 color: AppColors.textDark,
                 fontWeight: FontWeight.w900,
@@ -440,9 +471,9 @@ class _SubjectFilter extends StatelessWidget {
         for (final subject in subjects)
           ChoiceChip(
             avatar: CircleAvatar(backgroundColor: subject.color, radius: 5),
-            label: Text(subject.code),
-            selected: selectedCode == subject.code,
-            onSelected: (_) => onSelected(subject.code),
+            label: Text('${subject.code}-${subject.section}'),
+            selected: selectedCode == subject.sectionId,
+            onSelected: (_) => onSelected(subject.sectionId),
           ),
       ],
     );
@@ -659,4 +690,8 @@ class _EmptyPanel extends StatelessWidget {
       child: Text(message, style: const TextStyle(color: Color(0xFF667085))),
     );
   }
+}
+
+String _formatDateTime(DateTime value) {
+  return DateFormat('MMM d, yyyy h:mm a').format(value);
 }

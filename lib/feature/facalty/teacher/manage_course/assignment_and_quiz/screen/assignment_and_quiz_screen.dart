@@ -1,8 +1,10 @@
 import 'package:eub_connect/core/constant/app_color/app_colors.dart';
-import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_data.dart';
+import 'package:eub_connect/core/ui/state_panels.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_models.dart';
 import 'package:eub_connect/feature/facalty/teacher/manage_course/assignment_and_quiz/controller/assignment_and_quiz_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class AssignmentAndQuizScreen extends StatelessWidget {
   const AssignmentAndQuizScreen({super.key});
@@ -43,6 +45,20 @@ class AssignmentAndQuizScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: Obx(() {
+          final state = controller.workspace.value;
+          if (state.isLoading) {
+            return const LoadingPanel();
+          }
+          if (state.error != null) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: ErrorStatePanel(
+                message: state.error!,
+                onRetry: controller.load,
+              ),
+            );
+          }
+
           final isAssignment =
               controller.selectedMode.value == TeacherWorkMode.assignments;
 
@@ -106,8 +122,18 @@ class AssignmentAndQuizScreen extends StatelessWidget {
     BuildContext context,
     AssignmentAndQuizController controller,
   ) async {
+    if (controller.subjects.isEmpty) {
+      Get.snackbar(
+        'Assignment & Quiz',
+        'No assigned course sections found.',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(14),
+      );
+      return;
+    }
+
     var selectedSubject = controller.selectedSubjectCode.value == 'all'
-        ? demoSubjects.first.code
+        ? controller.subjects.first.sectionId
         : controller.selectedSubjectCode.value;
     final titleController = TextEditingController(
       text: 'Class task ${controller.assignments.length + 1}',
@@ -158,8 +184,10 @@ class AssignmentAndQuizScreen extends StatelessWidget {
                       items: [
                         for (final subject in controller.subjects)
                           DropdownMenuItem(
-                            value: subject.code,
-                            child: Text('${subject.code} | ${subject.name}'),
+                            value: subject.sectionId,
+                            child: Text(
+                              '${subject.code}-${subject.section} | ${subject.name}',
+                            ),
                           ),
                       ],
                       onChanged: (value) {
@@ -206,8 +234,8 @@ class AssignmentAndQuizScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
-                      onPressed: () {
-                        controller.publishAssignment(
+                      onPressed: () async {
+                        await controller.publishAssignment(
                           subjectCode: selectedSubject,
                           title: titleController.text,
                           dueDate: dueController.text,
@@ -246,8 +274,18 @@ class AssignmentAndQuizScreen extends StatelessWidget {
     BuildContext context,
     AssignmentAndQuizController controller,
   ) async {
+    if (controller.subjects.isEmpty) {
+      Get.snackbar(
+        'Assignment & Quiz',
+        'No assigned course sections found.',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(14),
+      );
+      return;
+    }
+
     var selectedSubject = controller.selectedSubjectCode.value == 'all'
-        ? demoSubjects.first.code
+        ? controller.subjects.first.sectionId
         : controller.selectedSubjectCode.value;
     final titleController = TextEditingController(
       text: 'Quiz ${controller.quizzes.length + 1}',
@@ -295,8 +333,10 @@ class AssignmentAndQuizScreen extends StatelessWidget {
                       items: [
                         for (final subject in controller.subjects)
                           DropdownMenuItem(
-                            value: subject.code,
-                            child: Text('${subject.code} | ${subject.name}'),
+                            value: subject.sectionId,
+                            child: Text(
+                              '${subject.code}-${subject.section} | ${subject.name}',
+                            ),
                           ),
                       ],
                       onChanged: (value) {
@@ -332,8 +372,8 @@ class AssignmentAndQuizScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
-                      onPressed: () {
-                        controller.publishQuiz(
+                      onPressed: () async {
+                        await controller.publishQuiz(
                           subjectCode: selectedSubject,
                           title: titleController.text,
                           schedule: scheduleController.text,
@@ -591,8 +631,8 @@ class _TeacherAssignmentList extends StatelessWidget {
                       _SubmissionReviewTile(
                         submission: submission,
                         totalMarks: assignment.totalMarks,
-                        onReview: () {
-                          controller.reviewSubmission(submission);
+                        onReview: () async {
+                          await controller.reviewSubmission(submission);
                           Get.snackbar(
                             'Assignment & Quiz',
                             '${submission.studentName} marked reviewed',
@@ -626,7 +666,7 @@ class _TeacherAssignmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subject = subjectForCode(assignment.subjectCode);
+    final subject = assignment.subject;
     final pending = submissions
         .where((submission) => submission.status.toLowerCase() == 'submitted')
         .length;
@@ -634,13 +674,18 @@ class _TeacherAssignmentCard extends StatelessWidget {
     return _WorkCard(
       subject: subject,
       title: assignment.title,
-      description: assignment.description,
+      description: assignment.instructions.isEmpty
+          ? 'No additional instructions provided.'
+          : assignment.instructions,
       badges: [
         _StatusBadge(label: subject.code, color: subject.color),
         _StatusBadge(label: assignment.status, color: AppColors.primary),
       ],
       chips: [
-        _InfoChip(icon: Icons.event_outlined, label: assignment.dueDate),
+        _InfoChip(
+          icon: Icons.event_outlined,
+          label: _formatDateTime(assignment.dueAt),
+        ),
         _InfoChip(
           icon: Icons.grade_outlined,
           label: '${assignment.totalMarks} marks',
@@ -756,8 +801,8 @@ class _TeacherQuizCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subject = subjectForCode(quiz.subjectCode);
-    final statusColor = quiz.status.toLowerCase() == 'open'
+    final subject = quiz.subject;
+    final statusColor = quiz.status.toLowerCase() == 'published'
         ? AppColors.secondary
         : quiz.status.toLowerCase() == 'draft'
         ? const Color(0xFF667085)
@@ -766,15 +811,26 @@ class _TeacherQuizCard extends StatelessWidget {
     return _WorkCard(
       subject: subject,
       title: quiz.title,
-      description: quiz.description,
+      description: quiz.instructions.isEmpty
+          ? 'No additional quiz instructions provided.'
+          : quiz.instructions,
       badges: [
         _StatusBadge(label: subject.code, color: subject.color),
         _StatusBadge(label: quiz.status, color: statusColor),
       ],
       chips: [
-        _InfoChip(icon: Icons.event_outlined, label: quiz.schedule),
-        _InfoChip(icon: Icons.timer_outlined, label: quiz.duration),
-        _InfoChip(icon: Icons.help_outline, label: '${quiz.questionCount} Qs'),
+        _InfoChip(
+          icon: Icons.event_outlined,
+          label: _formatDateTime(quiz.opensAt),
+        ),
+        _InfoChip(
+          icon: Icons.timer_outlined,
+          label: '${quiz.durationMinutes} min',
+        ),
+        _InfoChip(
+          icon: Icons.help_outline,
+          label: '${quiz.questions.length} Qs',
+        ),
         _InfoChip(
           icon: Icons.group_outlined,
           label: '${attempts.length} attempts',
@@ -873,12 +929,12 @@ class _SubmissionReviewTile extends StatelessWidget {
   });
 
   final AssignmentSubmission submission;
-  final int totalMarks;
+  final num totalMarks;
   final VoidCallback onReview;
 
   @override
   Widget build(BuildContext context) {
-    final reviewed = submission.status.toLowerCase() == 'reviewed';
+    final reviewed = submission.status.toLowerCase() == 'graded';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -903,7 +959,7 @@ class _SubmissionReviewTile extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                     Text(
-                      '${submission.studentId} | ${submission.section}',
+                      submission.studentId,
                       style: const TextStyle(
                         color: Color(0xFF667085),
                         fontSize: 12,
@@ -920,7 +976,9 @@ class _SubmissionReviewTile extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            submission.fileName,
+            submission.submittedAt == null
+                ? 'No submitted timestamp'
+                : 'Submitted ${_formatDateTime(submission.submittedAt!)}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Color(0xFF475467)),
@@ -961,7 +1019,7 @@ class _AttemptTile extends StatelessWidget {
   const _AttemptTile({required this.attempt, required this.totalMarks});
 
   final QuizAttempt attempt;
-  final int totalMarks;
+  final num totalMarks;
 
   @override
   Widget build(BuildContext context) {
@@ -985,7 +1043,7 @@ class _AttemptTile extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 Text(
-                  '${attempt.studentId} | ${attempt.submittedAt}',
+                  '${attempt.studentId}${attempt.submittedAt == null ? '' : ' | ${_formatDateTime(attempt.submittedAt!)}'}',
                   style: const TextStyle(
                     color: Color(0xFF667085),
                     fontSize: 12,
@@ -1029,9 +1087,9 @@ class _SubjectFilter extends StatelessWidget {
         for (final subject in subjects)
           ChoiceChip(
             avatar: CircleAvatar(backgroundColor: subject.color, radius: 5),
-            label: Text(subject.code),
-            selected: selectedCode == subject.code,
-            onSelected: (_) => onSelected(subject.code),
+            label: Text('${subject.code}-${subject.section}'),
+            selected: selectedCode == subject.sectionId,
+            onSelected: (_) => onSelected(subject.sectionId),
           ),
       ],
     );
@@ -1222,4 +1280,8 @@ class _EmptyPanel extends StatelessWidget {
       child: Text(message, style: const TextStyle(color: Color(0xFF667085))),
     );
   }
+}
+
+String _formatDateTime(DateTime value) {
+  return DateFormat('MMM d, yyyy h:mm a').format(value);
 }

@@ -1,31 +1,46 @@
-import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_data.dart';
+import 'package:eub_connect/core/data/async_value.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/model/assignment_quiz_models.dart';
+import 'package:eub_connect/feature/common/assignment_quiz/repository/assignment_quiz_repository.dart';
 import 'package:eub_connect/feature/student/assingment/model/assingment_model.dart';
 import 'package:get/get.dart';
 
 class AssingmentController extends GetxController {
+  AssingmentController({AssignmentQuizRepository? repository})
+    : _repository = repository ?? AssignmentQuizRepository();
+
+  final AssignmentQuizRepository _repository;
   final moduleStatus = 'Ready'.obs;
   final model = const AssingmentModel().obs;
   final selectedSubjectCode = 'all'.obs;
-  final submissions = demoAssignmentSubmissions
-      .where((submission) => submission.studentId == currentStudentId)
-      .toList()
-      .obs;
+  final workspace = const AsyncValue<AssignmentQuizWorkspace>.loading().obs;
 
-  List<CourseSubject> get subjects => demoSubjects;
+  @override
+  void onInit() {
+    super.onInit();
+    load();
+  }
+
+  List<CourseSubject> get subjects => workspace.value.data?.subjects ?? [];
+
+  List<AssignmentSubmission> get submissions {
+    return workspace.value.data?.submissions ?? [];
+  }
 
   List<CourseAssignment> get assignments {
     final selectedCode = selectedSubjectCode.value;
+    final allAssignments = workspace.value.data?.assignments ?? [];
     final filtered = selectedCode == 'all'
-        ? demoAssignments
-        : demoAssignments.where(
-            (assignment) => assignment.subjectCode == selectedCode,
+        ? allAssignments
+        : allAssignments.where(
+            (assignment) => assignment.subject.sectionId == selectedCode,
           );
     return filtered.toList();
   }
 
   int get openCount {
-    return demoAssignments.where((assignment) {
-      return assignment.status.toLowerCase() == 'open' &&
+    final allAssignments = workspace.value.data?.assignments ?? [];
+    return allAssignments.where((assignment) {
+      return assignment.status.toLowerCase() == 'published' &&
           submissionFor(assignment.id) == null;
     }).length;
   }
@@ -42,6 +57,18 @@ class AssingmentController extends GetxController {
     selectedSubjectCode.value = code;
   }
 
+  Future<void> load() async {
+    workspace.value = const AsyncValue.loading();
+    final result = await _repository.loadWorkspace();
+    if (result.isSuccess) {
+      workspace.value = AsyncValue.data(result.requireData);
+      return;
+    }
+    workspace.value = AsyncValue.error(
+      result.failure?.message ?? 'Unable to load assignments.',
+    );
+  }
+
   AssignmentSubmission? submissionFor(String assignmentId) {
     for (final submission in submissions) {
       if (submission.assignmentId == assignmentId) {
@@ -51,38 +78,25 @@ class AssingmentController extends GetxController {
     return null;
   }
 
-  void submitAssignment({
+  Future<void> submitAssignment({
     required CourseAssignment assignment,
     required String fileName,
     required String note,
-  }) {
-    final cleanFileName = fileName.trim().isEmpty
-        ? '${assignment.subjectCode.replaceAll(' ', '_').toLowerCase()}_${assignment.id}.pdf'
-        : fileName.trim();
+  }) async {
     final cleanNote = note.trim().isEmpty
-        ? 'Submitted from EUB Connect student portal.'
+        ? 'Submitted from EUB Connect.'
         : note.trim();
-    final submission = AssignmentSubmission(
-      assignmentId: assignment.id,
-      studentId: currentStudentId,
-      studentName: currentStudentName,
-      section: subjectForCode(assignment.subjectCode).section,
-      fileName: cleanFileName,
-      note: cleanNote,
-      submittedAt: 'Just now',
-      status: 'Submitted',
-      isLate: assignment.status.toLowerCase() == 'closed',
-    );
 
-    final existingIndex = submissions.indexWhere(
-      (item) => item.assignmentId == assignment.id,
+    final result = await _repository.submitAssignment(
+      assignmentId: assignment.id,
+      note: cleanNote,
     );
-    if (existingIndex == -1) {
-      submissions.add(submission);
-    } else {
-      submissions[existingIndex] = submission;
+    if (result.isSuccess) {
+      moduleStatus.value = 'Submitted';
+      await load();
+      return;
     }
 
-    moduleStatus.value = 'Submitted';
+    moduleStatus.value = result.failure?.message ?? 'Submission failed';
   }
 }

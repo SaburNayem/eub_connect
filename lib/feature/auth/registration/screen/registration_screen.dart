@@ -1,10 +1,8 @@
-import 'package:eub_connect/core/constant/app_color/app_colors.dart';
 import 'package:eub_connect/feature/auth/controller/auth_session_controller.dart';
 import 'package:eub_connect/feature/auth/registration/controller/registration_controller.dart';
 import 'package:eub_connect/feature/auth/registration/screen/widget/photo_field.dart';
 import 'package:eub_connect/feature/auth/widget/auth_panel.dart';
 import 'package:eub_connect/feature/auth/widget/auth_text_field.dart';
-import 'package:eub_connect/feature/home/model/static_feature.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -26,7 +24,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _controller = Get.put(RegistrationController());
   }
 
-  void _register() {
+  Future<void> _register() async {
     if (!_controller.validate()) {
       Get.snackbar(
         'Registration required',
@@ -37,17 +35,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    ensureAuthSession().register(_controller.registrationData);
+    final session = ensureAuthSession();
+    final success = await session.registerStudent(_controller.registrationData);
+    if (!mounted) return;
+    if (!success) {
+      Get.snackbar(
+        'Registration failed',
+        session.lastError.value ?? 'Please check your information.',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(14),
+      );
+      return;
+    }
 
-    if (widget.onAuthenticated != null) {
+    if (session.isAuthenticated && widget.onAuthenticated != null) {
       widget.onAuthenticated!();
       return;
     }
 
-    final registrationData = _controller.registrationData;
-
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Registered: ${registrationData.fullName}')),
+      SnackBar(
+        content: Text(
+          session.lastError.value ??
+              'Student account registered. Continue with login.',
+        ),
+      ),
     );
   }
 
@@ -65,21 +77,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       key: _controller.formKey,
       child: AuthPanel(
         title: 'Create Account',
-        subtitle: 'Add a static role profile for this demo',
+        subtitle: 'Create a student account with Supabase Auth',
         buttonLabel: 'Register',
         onSubmit: _register,
         children: [
           Obx(
             () => PhotoField(
               selected: _controller.photoPath.value != null,
-              onTap: _controller.selectDemoPhoto,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Obx(
-            () => _RoleChoiceField(
-              selectedRole: _controller.selectedRole.value,
-              onChanged: _controller.setRole,
+              onTap: _controller.markPhotoSelected,
             ),
           ),
           const SizedBox(height: 14),
@@ -119,8 +124,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               if (value == null || value.isEmpty) {
                 return 'Password is required';
               }
-              if (value.length < 4) {
-                return 'Password must be at least 4 characters';
+              if (value.length < 8) {
+                return 'Password must be at least 8 characters';
               }
               return null;
             },
@@ -156,70 +161,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               }
               return null;
             },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoleChoiceField extends StatelessWidget {
-  const _RoleChoiceField({
-    required this.selectedRole,
-    required this.onChanged,
-  });
-
-  final PortalRole selectedRole;
-  final ValueChanged<PortalRole> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE3E6EA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Account Type',
-            style: TextStyle(
-              color: AppColors.textDark,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: PortalRole.values.map((role) {
-              final selected = role == selectedRole;
-              return ChoiceChip(
-                selected: selected,
-                avatar: Icon(
-                  role.icon,
-                  size: 17,
-                  color: selected ? AppColors.white : role.color,
-                ),
-                label: Text(role.label),
-                labelStyle: TextStyle(
-                  color: selected ? AppColors.white : AppColors.textDark,
-                  fontWeight: FontWeight.w800,
-                ),
-                selectedColor: role.color,
-                backgroundColor: AppColors.white,
-                side: BorderSide(
-                  color: selected ? role.color : const Color(0xFFE3E6EA),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                onSelected: (_) => onChanged(role),
-              );
-            }).toList(),
           ),
         ],
       ),

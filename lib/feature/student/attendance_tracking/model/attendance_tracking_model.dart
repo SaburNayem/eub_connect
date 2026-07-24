@@ -165,7 +165,7 @@ const studentAttendanceCourses = [
         weekday: 'Sunday',
         slot: '11:00 AM',
         status: AttendanceDayStatus.present,
-        note: 'Prototype demo attended',
+        note: 'Prototype class attended',
       ),
     ],
   ),

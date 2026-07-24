@@ -51,8 +51,8 @@ class PhotoField extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     selected
-                        ? 'Photo selected for demo'
-                        : 'Upload photo option',
+                        ? 'Photo ready for upload after account creation'
+                        : 'Profile photo upload',
                     style: const TextStyle(
                       color: Color(0xFF707070),
                       fontSize: 13,
