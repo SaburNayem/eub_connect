@@ -100,8 +100,20 @@ class _LoginScreenState extends State<LoginScreen> {
               label: 'Password',
               icon: Icons.lock_outline,
               controller: _controller.passwordController,
-              obscureText: true,
+              obscureText: !_controller.isPasswordVisible.value,
               textInputAction: TextInputAction.done,
+              suffixIcon: IconButton(
+                tooltip: _controller.isPasswordVisible.value
+                    ? 'Hide password'
+                    : 'Show password',
+                onPressed: _controller.togglePasswordVisibility,
+                icon: Icon(
+                  _controller.isPasswordVisible.value
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppColors.primary,
+                ),
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Password is required';

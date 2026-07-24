@@ -8,6 +8,7 @@ class LoginController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final isSubmitting = false.obs;
+  final isPasswordVisible = false.obs;
 
   LoginModel get loginData {
     return LoginModel(
@@ -23,6 +24,10 @@ class LoginController extends GetxController {
   void fillDemoAccount({required String identifier}) {
     emailController.text = identifier;
     passwordController.text = '123456';
+  }
+
+  void togglePasswordVisibility() {
+    isPasswordVisible.value = !isPasswordVisible.value;
   }
 
   Future<bool> submit() async {
