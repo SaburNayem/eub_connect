@@ -10,6 +10,8 @@ class HomeController extends GetxController {
   final AuthSessionController _session = ensureAuthSession();
   final activeRole = PortalRole.student.obs;
   final selectedFeatureIndex = (-1).obs;
+  final selectedNavigationGroupIndex = 0.obs;
+  final selectedBottomNavigationIndex = 0.obs;
   final navigationQuery = ''.obs;
 
   StaticAccount get account => _session.account;
@@ -21,6 +23,9 @@ class HomeController extends GetxController {
     ever(_session.currentAccount, (_) {
       activeRole.value = _session.role;
       selectedFeatureIndex.value = -1;
+      selectedNavigationGroupIndex.value = 0;
+      selectedBottomNavigationIndex.value = 0;
+      navigationQuery.value = '';
     });
   }
 
@@ -32,29 +37,9 @@ class HomeController extends GetxController {
   }
 
   List<StaticFeature> get accessibleFeatures {
-    return staticFeatures
-        .where((feature) => feature.access.contains(activeRole.value))
-        .toList();
-  }
-
-  int get mobileDestinationIndex {
-    final feature = selectedFeature;
-    if (feature == null) {
-      return 0;
-    }
-
-    switch (feature.category) {
-      case 'Academic':
-      case 'Teacher':
-        return 1;
-      case 'Finance':
-        return 2;
-      case 'Campus':
-      case 'Communication':
-        return 3;
-      default:
-        return 4;
-    }
+    return _navigationEntriesForRole(
+      activeRole.value,
+    ).map((entry) => entry.value).toList();
   }
 
   StaticFeature? get selectedFeature {
@@ -70,6 +55,18 @@ class HomeController extends GetxController {
     navigationQuery.value = value;
   }
 
+  void selectNavigationGroup(int index) {
+    selectedNavigationGroupIndex.value = index;
+    selectedBottomNavigationIndex.value = index;
+    selectedFeatureIndex.value = -1;
+  }
+
+  void selectBottomNavigation(int index) {
+    selectedBottomNavigationIndex.value = index;
+    selectedNavigationGroupIndex.value = index;
+    selectedFeatureIndex.value = -1;
+  }
+
   void selectDashboard({bool closeDrawer = false}) {
     selectedFeatureIndex.value = -1;
     if (closeDrawer) {
@@ -78,16 +75,21 @@ class HomeController extends GetxController {
   }
 
   void selectFeature(int index, {bool closeDrawer = false}) {
-    final feature = staticFeatures[index];
-    if (!feature.access.contains(activeRole.value)) {
-      showMessage('${feature.title} is not available for ${activeRole.value.label}');
+    if (index < 0 || index >= staticFeatures.length) {
+      showMessage('Feature');
       return;
     }
 
-    selectedFeatureIndex.value = index;
-    if (closeDrawer) {
-      Get.back();
+    final feature = staticFeatures[index];
+    if (!feature.access.contains(activeRole.value)) {
+      showMessage(
+        '${feature.title} is not available for ${activeRole.value.label}',
+      );
+      return;
     }
+
+    selectedFeatureIndex.value = -1;
+    _openFeature(feature, closeDrawer: closeDrawer);
   }
 
   void jumpToFeature(String title) {
@@ -100,108 +102,117 @@ class HomeController extends GetxController {
       return;
     }
 
-    selectFeature(index);
+    _openFeature(staticFeatures[index]);
   }
 
-  void selectMobileDestination(int index, {VoidCallback? onMenu}) {
-    switch (index) {
-      case 0:
-        selectDashboard();
-        return;
-      case 1:
-        _jumpToPreferredFeature(
-          categories: const ['Academic', 'Teacher'],
-          preferredTitles: _academicDestinationTitles(),
-        );
-        return;
-      case 2:
-        _jumpToPreferredFeature(
-          categories: const ['Finance'],
-          preferredTitles: const [
-            'Tuition Fees',
-            'Payment History',
-            'Scholarships',
-          ],
-        );
-        return;
-      case 3:
-        _jumpToPreferredFeature(
-          categories: const ['Campus', 'Communication'],
-          preferredTitles: const [
-            'Events',
-            'Notice Board',
-            'Student Support',
-            'Lost and Found',
-            'Community Forum',
-            'Discussion Board',
-          ],
-        );
-        return;
-      default:
-        onMenu?.call();
-        return;
-    }
-  }
-
-  void _jumpToPreferredFeature({
-    required List<String> categories,
-    required List<String> preferredTitles,
-  }) {
-    for (final title in preferredTitles) {
-      final index = staticFeatures.indexWhere((feature) {
-        return feature.title == title &&
-            feature.access.contains(activeRole.value);
-      });
-      if (index != -1) {
-        selectFeature(index);
+  void _openFeature(StaticFeature feature, {bool closeDrawer = false}) {
+    void pushFeature() {
+      final route = _routeForFeature(feature);
+      if (route == null) {
+        Get.to(() => FeatureModuleScreen(feature: feature));
         return;
       }
+
+      Get.toNamed(route);
     }
 
-    final index = staticFeatures.indexWhere((feature) {
-      return categories.contains(feature.category) &&
-          feature.access.contains(activeRole.value);
-    });
-    if (index != -1) {
-      selectFeature(index);
+    if (closeDrawer) {
+      Get.back();
+      Future<void>.delayed(const Duration(milliseconds: 120), pushFeature);
       return;
     }
 
-    showMessage('Module');
+    pushFeature();
   }
 
-  List<String> _academicDestinationTitles() {
-    switch (activeRole.value) {
-      case PortalRole.student:
-        return const [
-          'Class Routine',
-          'Assignments',
-          'Attendance',
-          'Results',
-          'Semester Courses',
-        ];
-      case PortalRole.teacher:
-        return const [
-          'Teacher Portal',
-          'Lecture Materials',
-          'Attendance',
-          'Quiz System',
-          'Marks Result',
-        ];
-      case PortalRole.faculty:
-        return const [
-          'Academic Calendar',
-          'Routine Management',
-          'Department Management',
-          'Results',
-        ];
-      case PortalRole.admin:
-        return const [
-          'Academic Calendar',
-          'Routine Management',
-          'Results',
-          'Quiz System',
-        ];
+  String? _routeForFeature(StaticFeature feature) {
+    switch (feature.title) {
+      case 'Authentication':
+        return AppRoutes.auth;
+      case 'Student Portal':
+        return activeRole.value == PortalRole.student
+            ? AppRoutes.studentProfile
+            : AppRoutes.studentManagement;
+      case 'Teacher Portal':
+        return AppRoutes.teacherDashboard;
+      case 'Faculty Portal':
+      case 'Administration Panel':
+        return AppRoutes.adminFaculty;
+      case 'Departments':
+        return AppRoutes.departments;
+      case 'Department Management':
+        return AppRoutes.departmentManagement;
+      case 'Teacher Management':
+        return AppRoutes.teacherManagement;
+      case 'Student Management':
+        return AppRoutes.studentManagement;
+      case 'Events':
+        return activeRole.value == PortalRole.student
+            ? AppRoutes.studentEvents
+            : AppRoutes.events;
+      case 'Routine Management':
+        return AppRoutes.routineManagement;
+      case 'Class Routine':
+        return AppRoutes.studentClassRoutine;
+      case 'Academic Calendar':
+        return AppRoutes.academicCalendar;
+      case 'Lost and Found':
+        return AppRoutes.lostFound;
+      case 'Notice Board':
+        return AppRoutes.notice;
+      case 'Assignments':
+        return activeRole.value == PortalRole.student
+            ? AppRoutes.studentAssignments
+            : AppRoutes.assignmentQuiz;
+      case 'Attendance':
+        return activeRole.value == PortalRole.student
+            ? AppRoutes.studentAttendance
+            : AppRoutes.attendanceManagement;
+      case 'Student Notices':
+        return AppRoutes.noticeForStudent;
+      case 'Lecture Materials':
+        return AppRoutes.lectureMaterials;
+      case 'Academic Report':
+        return AppRoutes.teacherAcademicReport;
+      case 'Marks Result':
+        return AppRoutes.marksResult;
+      case 'Community Forum':
+        return AppRoutes.studentClubCommunity;
+      case 'Discussion Board':
+        return AppRoutes.studentDiscussionForum;
+      case 'Tuition Fees':
+        return AppRoutes.studentTuitionFee;
+      case 'Scholarships':
+        return AppRoutes.studentScholarships;
+      case 'Quiz System':
+        return activeRole.value == PortalRole.student
+            ? AppRoutes.studentQuizPractice
+            : AppRoutes.assignmentQuiz;
+      case 'Results':
+        return activeRole.value == PortalRole.student
+            ? AppRoutes.studentExamResults
+            : AppRoutes.resultReport;
+      case 'Payment History':
+        return activeRole.value == PortalRole.student
+            ? AppRoutes.studentPaymentHistory
+            : AppRoutes.payment;
+      case 'User Roles':
+        return AppRoutes.userRoleManagement;
+      case 'System Activity':
+        return AppRoutes.systemActivity;
+      case 'Notifications':
+      case 'Settings':
+        return AppRoutes.settings;
+      case 'Student Support':
+        return AppRoutes.studentSupport;
+      case 'Semester Courses':
+        return AppRoutes.studentSemesterCourses;
+      case 'Profile':
+        return activeRole.value == PortalRole.student
+            ? AppRoutes.studentProfile
+            : null;
+      default:
+        return null;
     }
   }
 
@@ -234,7 +245,10 @@ class HomeScreen extends StatelessWidget {
     return Obx(() {
       final activeRole = _controller.activeRole.value;
       final selectedFeatureIndex = _controller.selectedFeatureIndex.value;
-      final selectedFeature = _controller.selectedFeature;
+      final selectedNavigationGroupIndex =
+          _controller.selectedNavigationGroupIndex.value;
+      final selectedBottomNavigationIndex =
+          _controller.selectedBottomNavigationIndex.value;
       final dashboardProfile = _controller.dashboardProfile;
       final accessibleFeatures = _controller.accessibleFeatures;
       final navigationQuery = _controller.navigationQuery.value;
@@ -243,6 +257,23 @@ class HomeScreen extends StatelessWidget {
       return LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 1040;
+          final drawerWidth = constraints.maxWidth >= 430
+              ? 360.0
+              : constraints.maxWidth * 0.9;
+          final mobileNavigationGroups = _navigationGroupsForRole(activeRole);
+          final selectedMobileGroupIndex = _safeNavigationGroupIndex(
+            selectedBottomNavigationIndex,
+            mobileNavigationGroups.length,
+          );
+          final selectedMobileGroup =
+              mobileNavigationGroups[selectedMobileGroupIndex];
+          final selectedMobileFeatures = _navigationEntriesForGroup(
+            selectedMobileGroup,
+            activeRole,
+          ).map((entry) => entry.value).toList();
+          final dashboardFeatures = isWide
+              ? accessibleFeatures
+              : selectedMobileFeatures;
 
           return Scaffold(
             key: _scaffoldKey,
@@ -250,15 +281,16 @@ class HomeScreen extends StatelessWidget {
             drawer: isWide
                 ? null
                 : Drawer(
-                    width: 318,
+                    width: drawerWidth,
                     child: _NavigationPanel(
                       account: account,
                       activeRole: activeRole,
                       selectedFeatureIndex: selectedFeatureIndex,
+                      selectedNavigationGroupIndex:
+                          selectedNavigationGroupIndex,
                       query: navigationQuery,
                       onQueryChanged: _controller.updateQuery,
-                      onDashboardSelected: () =>
-                          _controller.selectDashboard(closeDrawer: true),
+                      onGroupSelected: _controller.selectNavigationGroup,
                       onFeatureSelected: (index) =>
                           _controller.selectFeature(index, closeDrawer: true),
                       onLogout: _controller.signOut,
@@ -272,11 +304,17 @@ class HomeScreen extends StatelessWidget {
                     elevation: 0,
                     surfaceTintColor: AppColors.white,
                     titleSpacing: 0,
-                    title: const Text(
-                      'EUB Connect',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                    title: Text(
+                      '${selectedMobileGroup.title} ${activeRole.label}',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                     actions: [
+                      IconButton(
+                        tooltip: 'Search features',
+                        onPressed: () =>
+                            _scaffoldKey.currentState?.openDrawer(),
+                        icon: const Icon(Icons.search),
+                      ),
                       IconButton(
                         tooltip: 'Notifications',
                         onPressed: () =>
@@ -293,26 +331,24 @@ class HomeScreen extends StatelessWidget {
             bottomNavigationBar: isWide
                 ? null
                 : _MobileBottomNavigation(
-                    selectedIndex: _controller.mobileDestinationIndex,
-                    onDestinationSelected: (index) {
-                      _controller.selectMobileDestination(
-                        index,
-                        onMenu: () => _scaffoldKey.currentState?.openDrawer(),
-                      );
-                    },
+                    groups: mobileNavigationGroups,
+                    selectedIndex: selectedMobileGroupIndex,
+                    onSelected: _controller.selectBottomNavigation,
                   ),
             body: Row(
               children: [
                 if (isWide)
                   SizedBox(
-                    width: 304,
+                    width: 328,
                     child: _NavigationPanel(
                       account: account,
                       activeRole: activeRole,
                       selectedFeatureIndex: selectedFeatureIndex,
+                      selectedNavigationGroupIndex:
+                          selectedNavigationGroupIndex,
                       query: navigationQuery,
                       onQueryChanged: _controller.updateQuery,
-                      onDashboardSelected: _controller.selectDashboard,
+                      onGroupSelected: _controller.selectNavigationGroup,
                       onFeatureSelected: _controller.selectFeature,
                       onLogout: _controller.signOut,
                     ),
@@ -345,24 +381,29 @@ class HomeScreen extends StatelessWidget {
                                 if (!isWide)
                                   _MobileAccountStrip(account: account),
                                 if (!isWide) const SizedBox(height: 16),
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 180),
-                                  child: selectedFeature == null
-                                      ? _DashboardView(
-                                          key: ValueKey(activeRole),
-                                          profile: dashboardProfile,
-                                          accessibleFeatures:
-                                              accessibleFeatures,
-                                          onFeatureTap:
-                                              _controller.jumpToFeature,
-                                          onAction: _controller.showMessage,
-                                        )
-                                      : _FeatureDetailView(
-                                          key: ValueKey(selectedFeature.title),
-                                          feature: selectedFeature,
-                                          onAction: _controller.showMessage,
-                                        ),
-                                ),
+                                if (isWide)
+                                  _DashboardView(
+                                    key: ValueKey(activeRole),
+                                    profile: dashboardProfile,
+                                    accessibleFeatures: dashboardFeatures,
+                                    featureTitle: 'Role Features',
+                                    featureSubtitle:
+                                        '${accessibleFeatures.length} features available for ${dashboardProfile.role.label.toLowerCase()} access',
+                                    onFeatureTap: _controller.jumpToFeature,
+                                  )
+                                else
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 180),
+                                    child: _MobileSectionView(
+                                      key: ValueKey(
+                                        '$activeRole-$selectedMobileGroupIndex',
+                                      ),
+                                      role: activeRole,
+                                      group: selectedMobileGroup,
+                                      features: dashboardFeatures,
+                                      onFeatureTap: _controller.jumpToFeature,
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
@@ -380,10 +421,14 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+double _dashboardTextScale(BuildContext context) {
+  return MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 3.0).toDouble();
+}
+
 class FeatureModuleScreen extends StatelessWidget {
   const FeatureModuleScreen({
     this.title,
-    this.category = 'Module',
+    this.category = 'Feature',
     this.feature,
     super.key,
   }) : assert(feature != null || title != null);
@@ -406,6 +451,7 @@ class FeatureModuleScreen extends StatelessWidget {
         backgroundColor: AppColors.white,
         foregroundColor: AppColors.primary,
         surfaceTintColor: AppColors.white,
+        leading: BackButton(onPressed: () => Get.back()),
         title: Text(feature.title),
       ),
       body: SingleChildScrollView(
@@ -413,20 +459,7 @@ class FeatureModuleScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1180),
-            child: _FeatureDetailView(
-              feature: feature,
-              onAction: (label) {
-                Get.snackbar(
-                  'EUB Connect',
-                  '$label is ready in the demo',
-                  snackPosition: SnackPosition.BOTTOM,
-                  margin: const EdgeInsets.all(14),
-                  backgroundColor: AppColors.primary,
-                  colorText: AppColors.white,
-                  duration: const Duration(seconds: 2),
-                );
-              },
-            ),
+            child: _FeatureDetailView(feature: feature),
           ),
         ),
       ),
@@ -457,50 +490,140 @@ class FeatureModuleControllerScreen<T extends GetxController>
 
 class _MobileBottomNavigation extends StatelessWidget {
   const _MobileBottomNavigation({
+    required this.groups,
     required this.selectedIndex,
-    required this.onDestinationSelected,
+    required this.onSelected,
   });
 
+  final List<_NavigationGroup> groups;
   final int selectedIndex;
-  final ValueChanged<int> onDestinationSelected;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return NavigationBar(
-      height: 72,
-      elevation: 0,
-      selectedIndex: selectedIndex,
-      backgroundColor: AppColors.white,
-      indicatorColor: const Color(0xFFE9ECFF),
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      onDestinationSelected: onDestinationSelected,
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.dashboard_outlined),
-          selectedIcon: Icon(Icons.dashboard),
-          label: 'Home',
+    if (groups.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final safeIndex = _safeNavigationGroupIndex(selectedIndex, groups.length);
+    final hasCompactTabCount = groups.length <= 5;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(8, 6, 8, hasCompactTabCount ? 6 : 8),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          border: Border(top: BorderSide(color: Color(0xFFE3E6EA))),
         ),
-        NavigationDestination(
-          icon: Icon(Icons.school_outlined),
-          selectedIcon: Icon(Icons.school),
-          label: 'Academic',
+        child: SizedBox(
+          height: hasCompactTabCount ? 62 : 64,
+          child: hasCompactTabCount
+              ? Row(
+                  children: [
+                    for (var index = 0; index < groups.length; index++)
+                      Expanded(
+                        child: _MobileBottomNavigationItem(
+                          group: groups[index],
+                          selected: index == safeIndex,
+                          onTap: () => onSelected(index),
+                        ),
+                      ),
+                  ],
+                )
+              : ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: groups.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 4),
+                  itemBuilder: (context, index) {
+                    return SizedBox(
+                      width: 76,
+                      child: _MobileBottomNavigationItem(
+                        group: groups[index],
+                        selected: index == safeIndex,
+                        onTap: () => onSelected(index),
+                      ),
+                    );
+                  },
+                ),
         ),
-        NavigationDestination(
-          icon: Icon(Icons.account_balance_wallet_outlined),
-          selectedIcon: Icon(Icons.account_balance_wallet),
-          label: 'Finance',
+      ),
+    );
+  }
+}
+
+class _MobileBottomNavigationItem extends StatelessWidget {
+  const _MobileBottomNavigationItem({
+    required this.group,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _NavigationGroup group;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? group.color : const Color(0xFF667085);
+    final background = selected
+        ? group.color.withValues(alpha: 0.12)
+        : Colors.transparent;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${group.title} section',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    curve: Curves.easeOut,
+                    width: selected ? 38 : 34,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: background,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(group.icon, color: foreground, size: 20),
+                  ),
+                  const SizedBox(height: 3),
+                  Expanded(
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          group.title,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: foreground,
+                            fontSize: 11,
+                            fontWeight: selected
+                                ? FontWeight.w900
+                                : FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-        NavigationDestination(
-          icon: Icon(Icons.campaign_outlined),
-          selectedIcon: Icon(Icons.campaign),
-          label: 'Campus',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.menu),
-          selectedIcon: Icon(Icons.menu_open),
-          label: 'Menu',
-        ),
-      ],
+      ),
     );
   }
 }
@@ -690,9 +813,10 @@ class _NavigationPanel extends StatelessWidget {
     required this.account,
     required this.activeRole,
     required this.selectedFeatureIndex,
+    required this.selectedNavigationGroupIndex,
     required this.query,
     required this.onQueryChanged,
-    required this.onDashboardSelected,
+    required this.onGroupSelected,
     required this.onFeatureSelected,
     required this.onLogout,
   });
@@ -700,29 +824,33 @@ class _NavigationPanel extends StatelessWidget {
   final StaticAccount account;
   final PortalRole activeRole;
   final int selectedFeatureIndex;
+  final int selectedNavigationGroupIndex;
   final String query;
   final ValueChanged<String> onQueryChanged;
-  final VoidCallback onDashboardSelected;
+  final ValueChanged<int> onGroupSelected;
   final ValueChanged<int> onFeatureSelected;
   final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
+    final groups = _navigationGroupsForRole(activeRole);
     final normalizedQuery = query.trim().toLowerCase();
-    final indexedFeatures = staticFeatures.asMap().entries.where((entry) {
-      final feature = entry.value;
-      final matchesQuery =
-          normalizedQuery.isEmpty ||
-          feature.title.toLowerCase().contains(normalizedQuery) ||
-          feature.category.toLowerCase().contains(normalizedQuery);
-      return feature.access.contains(activeRole) && matchesQuery;
-    }).toList();
-    final categories = <String>{
-      for (final entry in indexedFeatures) entry.value.category,
-    }.toList();
-    final pinnedEntries = normalizedQuery.isEmpty
-        ? _pinnedFeatureEntries(activeRole)
-        : <MapEntry<int, StaticFeature>>[];
+    final allEntries = _navigationEntriesForGroups(groups, activeRole);
+    final selectedGroupIndex = _safeNavigationGroupIndex(
+      selectedNavigationGroupIndex,
+      groups.length,
+    );
+    final selectedGroup = groups.isEmpty ? null : groups[selectedGroupIndex];
+    final visibleEntries = normalizedQuery.isEmpty
+        ? (selectedGroup == null
+              ? <MapEntry<int, StaticFeature>>[]
+              : _navigationEntriesForGroup(selectedGroup, activeRole))
+        : allEntries.where((entry) {
+            final feature = entry.value;
+            return feature.title.toLowerCase().contains(normalizedQuery) ||
+                feature.category.toLowerCase().contains(normalizedQuery) ||
+                feature.description.toLowerCase().contains(normalizedQuery);
+          }).toList();
 
     return Container(
       color: AppColors.white,
@@ -744,11 +872,11 @@ class _NavigationPanel extends StatelessWidget {
                     child: const Icon(Icons.school, color: AppColors.white),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'EUB Connect',
                           style: TextStyle(
                             color: AppColors.primary,
@@ -756,12 +884,15 @@ class _NavigationPanel extends StatelessWidget {
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Management console',
-                          style: TextStyle(
+                          '${account.role.label} workspace',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             color: Color(0xFF667085),
                             fontSize: 12,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -775,77 +906,57 @@ class _NavigationPanel extends StatelessWidget {
               child: TextField(
                 onChanged: onQueryChanged,
                 decoration: const InputDecoration(
-                  hintText: 'Search modules',
+                  hintText: 'Search features',
                   prefixIcon: Icon(Icons.search),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
               child: _RoleSummary(account: account),
             ),
+            if (normalizedQuery.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                child: _NavigationSegmentBar(
+                  groups: groups,
+                  selectedIndex: selectedGroupIndex,
+                  onSelected: onGroupSelected,
+                ),
+              ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(10, 4, 10, 18),
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 18),
                 children: [
-                  _NavigationTile(
-                    title: 'Dashboard',
-                    subtitle: 'Role overview',
-                    icon: Icons.dashboard_outlined,
-                    selected: selectedFeatureIndex == -1,
-                    onTap: onDashboardSelected,
-                    enabled: true,
-                  ),
-                  if (pinnedEntries.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(12, 18, 12, 8),
-                      child: Text(
-                        'PINNED FEATURES',
-                        style: TextStyle(
-                          color: Color(0xFF667085),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
-                    _PinnedFeaturePanel(
-                      entries: pinnedEntries,
-                      selectedFeatureIndex: selectedFeatureIndex,
-                      onFeatureSelected: onFeatureSelected,
-                    ),
-                  ],
-                  for (final category in categories) ...[
+                  if (normalizedQuery.isEmpty && selectedGroup != null)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 18, 12, 8),
-                      child: Text(
-                        category.toUpperCase(),
-                        style: const TextStyle(
-                          color: Color(0xFF667085),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
-                        ),
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+                      child: _NavigationGroupHeader(group: selectedGroup),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+                      child: _SectionHeader(
+                        title: 'Search Results',
+                        subtitle:
+                            '${visibleEntries.length} features for ${activeRole.label.toLowerCase()}',
                       ),
                     ),
-                    for (final entry in indexedFeatures.where(
-                      (entry) => entry.value.category == category,
-                    ))
-                      _NavigationTile(
-                        title: entry.value.title,
-                        subtitle: 'Available for ${activeRole.label}',
-                        icon: entry.value.icon,
-                        selected: selectedFeatureIndex == entry.key,
-                        enabled: true,
-                        onTap: () => onFeatureSelected(entry.key),
-                      ),
-                  ],
-                  if (indexedFeatures.isEmpty)
+                  for (final entry in visibleEntries)
+                    _NavigationTile(
+                      title: entry.value.title,
+                      subtitle: entry.value.category,
+                      icon: entry.value.icon,
+                      selected: selectedFeatureIndex == entry.key,
+                      enabled: true,
+                      onTap: () => onFeatureSelected(entry.key),
+                    ),
+                  if (visibleEntries.isEmpty)
                     const Padding(
                       padding: EdgeInsets.all(18),
                       child: Text(
-                        'No modules found',
+                        'No features found',
                         style: TextStyle(color: Color(0xFF667085)),
                       ),
                     ),
@@ -878,15 +989,17 @@ class _DashboardView extends StatelessWidget {
   const _DashboardView({
     required this.profile,
     required this.accessibleFeatures,
+    required this.featureTitle,
+    required this.featureSubtitle,
     required this.onFeatureTap,
-    required this.onAction,
     super.key,
   });
 
   final DashboardProfile profile;
   final List<StaticFeature> accessibleFeatures;
+  final String featureTitle;
+  final String featureSubtitle;
   final ValueChanged<String> onFeatureTap;
-  final ValueChanged<String> onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -906,48 +1019,105 @@ class _DashboardView extends StatelessWidget {
         const SizedBox(height: 18),
         _MetricGrid(metrics: profile.metrics, accent: profile.role.color),
         const SizedBox(height: 18),
-        _ResponsivePair(
-          left: _RecordPanel(
-            title: 'Priority Queue',
-            subtitle: 'Current role focus',
-            records: profile.priorities,
-          ),
-          right: _RecordPanel(
-            title: 'Today Schedule',
-            subtitle: 'Static calendar snapshot',
-            records: profile.schedule,
-          ),
-        ),
-        const SizedBox(height: 18),
-        _SectionHeader(
-          title: 'Role Modules',
-          subtitle:
-              '${accessibleFeatures.length} modules available for ${profile.role.label.toLowerCase()} access',
-        ),
+        _SectionHeader(title: featureTitle, subtitle: featureSubtitle),
         const SizedBox(height: 10),
         _FeatureLaunchGrid(
           features: accessibleFeatures,
           onFeatureTap: onFeatureTap,
-        ),
-        const SizedBox(height: 18),
-        _QuickActionPanel(
-          actions: _dashboardActions(profile.role),
-          onAction: onAction,
         ),
       ],
     );
   }
 }
 
-class _FeatureDetailView extends StatelessWidget {
-  const _FeatureDetailView({
-    required this.feature,
-    required this.onAction,
+class _MobileSectionView extends StatelessWidget {
+  const _MobileSectionView({
+    required this.role,
+    required this.group,
+    required this.features,
+    required this.onFeatureTap,
     super.key,
   });
 
+  final PortalRole role;
+  final _NavigationGroup group;
+  final List<StaticFeature> features;
+  final ValueChanged<String> onFeatureTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _HeaderBand(
+          icon: group.icon,
+          accent: group.color,
+          title: group.title,
+          subtitle: group.description,
+          trailing: _StatusPill(
+            label: '${features.length} features',
+            color: group.color,
+          ),
+        ),
+        const SizedBox(height: 18),
+        _SectionHeader(
+          title: '${group.title} Features',
+          subtitle:
+              'Available for ${role.label.toLowerCase()} access in this section',
+        ),
+        const SizedBox(height: 10),
+        if (features.isEmpty)
+          _EmptySectionPanel(group: group, role: role)
+        else
+          _FeatureLaunchGrid(features: features, onFeatureTap: onFeatureTap),
+      ],
+    );
+  }
+}
+
+class _EmptySectionPanel extends StatelessWidget {
+  const _EmptySectionPanel({required this.group, required this.role});
+
+  final _NavigationGroup group;
+  final PortalRole role;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE3E6EA)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: group.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(group.icon, color: group.color, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No ${group.title.toLowerCase()} features are enabled for ${role.label.toLowerCase()} access yet.',
+              style: const TextStyle(color: Color(0xFF667085), height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureDetailView extends StatelessWidget {
+  const _FeatureDetailView({required this.feature});
+
   final StaticFeature feature;
-  final ValueChanged<String> onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -972,17 +1142,6 @@ class _FeatureDetailView extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         _MetricGrid(metrics: feature.metrics, accent: feature.accent),
-        const SizedBox(height: 18),
-        _ResponsivePair(
-          left: _QuickActionPanel(actions: feature.actions, onAction: onAction),
-          right: _ModuleSnapshot(feature: feature),
-        ),
-        const SizedBox(height: 18),
-        _RecordPanel(
-          title: '${feature.title} Records',
-          subtitle: feature.category,
-          records: feature.records,
-        ),
       ],
     );
   }
@@ -1093,6 +1252,11 @@ class _MetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final textScale = _dashboardTextScale(context);
+        final spacing = constraints.maxWidth < 360 ? 10.0 : 12.0;
+        final tileExtent = (88.0 + (74.0 * textScale))
+            .clamp(162.0, 320.0)
+            .toDouble();
         final columns = constraints.maxWidth >= 1020
             ? 4
             : constraints.maxWidth >= 640
@@ -1105,9 +1269,9 @@ class _MetricGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            mainAxisExtent: 128,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            mainAxisExtent: tileExtent,
           ),
           itemBuilder: (context, index) {
             final metric = metrics[index];
@@ -1127,344 +1291,80 @@ class _MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE3E6EA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(metric.icon, color: accent, size: 21),
-              ),
-              const Spacer(),
-              const Icon(Icons.more_horiz, color: Color(0xFF98A2B3), size: 20),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            metric.value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textDark,
-              fontSize: 25,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            metric.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFF344054),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            metric.note,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF667085), fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ResponsivePair extends StatelessWidget {
-  const _ResponsivePair({required this.left, required this.right});
-
-  final Widget left;
-  final Widget right;
-
-  @override
-  Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 820) {
-          return Column(children: [left, const SizedBox(height: 12), right]);
-        }
+        final isCompact = constraints.maxWidth < 320;
+        final padding = isCompact ? 14.0 : 16.0;
+        final iconBoxSize = isCompact ? 36.0 : 38.0;
+        final valueFontSize = isCompact ? 23.0 : 25.0;
 
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        return Container(
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE3E6EA)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: left),
-              const SizedBox(width: 12),
-              Expanded(child: right),
+              Row(
+                children: [
+                  Container(
+                    width: iconBoxSize,
+                    height: iconBoxSize,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(metric.icon, color: accent, size: 21),
+                  ),
+                  const Spacer(),
+                  const Icon(
+                    Icons.more_horiz,
+                    color: Color(0xFF98A2B3),
+                    size: 20,
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                metric.value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.textDark,
+                  fontSize: valueFontSize,
+                  fontWeight: FontWeight.w900,
+                  height: 1.15,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                metric.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF344054),
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                metric.note,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF667085),
+                  fontSize: 12,
+                  height: 1.2,
+                ),
+              ),
             ],
           ),
         );
       },
-    );
-  }
-}
-
-class _RecordPanel extends StatelessWidget {
-  const _RecordPanel({
-    required this.title,
-    required this.subtitle,
-    required this.records,
-  });
-
-  final String title;
-  final String subtitle;
-  final List<StaticRecord> records;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE3E6EA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: _SectionHeader(title: title, subtitle: subtitle),
-          ),
-          const Divider(height: 1, color: Color(0xFFE3E6EA)),
-          for (final record in records)
-            _RecordTile(record: record, color: _statusColor(record.status)),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecordTile extends StatelessWidget {
-  const _RecordTile({required this.record, required this.color});
-
-  final StaticRecord record;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(record.icon, color: color, size: 21),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        record.title,
-                        style: const TextStyle(
-                          color: AppColors.textDark,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _StatusPill(label: record.status, color: color),
-                  ],
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  record.subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF667085),
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  record.meta,
-                  style: const TextStyle(
-                    color: Color(0xFF475467),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickActionPanel extends StatelessWidget {
-  const _QuickActionPanel({required this.actions, required this.onAction});
-
-  final List<String> actions;
-  final ValueChanged<String> onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE3E6EA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SectionHeader(
-            title: 'Quick Actions',
-            subtitle: 'Static command center',
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: actions
-                .map(
-                  (action) => OutlinedButton.icon(
-                    onPressed: () => onAction(action),
-                    icon: Icon(_actionIcon(action), size: 18),
-                    label: Text(action),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModuleSnapshot extends StatelessWidget {
-  const _ModuleSnapshot({required this.feature});
-
-  final StaticFeature feature;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE3E6EA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionHeader(title: 'Module Snapshot', subtitle: feature.category),
-          const SizedBox(height: 16),
-          _SnapshotRow(
-            icon: Icons.category_outlined,
-            label: 'Category',
-            value: feature.category,
-            color: feature.accent,
-          ),
-          _SnapshotRow(
-            icon: Icons.group_outlined,
-            label: 'Access',
-            value: feature.access.map((role) => role.label).join(', '),
-            color: feature.accent,
-          ),
-          _SnapshotRow(
-            icon: Icons.task_alt_outlined,
-            label: 'Records',
-            value: '${feature.records.length} highlighted',
-            color: feature.accent,
-          ),
-          _SnapshotRow(
-            icon: Icons.bolt_outlined,
-            label: 'Actions',
-            value: '${feature.actions.length} available',
-            color: feature.accent,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SnapshotRow extends StatelessWidget {
-  const _SnapshotRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Color(0xFF667085),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -1482,6 +1382,11 @@ class _FeatureLaunchGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final textScale = _dashboardTextScale(context);
+        final spacing = constraints.maxWidth < 360 ? 10.0 : 12.0;
+        final tileExtent = (82.0 + (38.0 * textScale))
+            .clamp(118.0, 240.0)
+            .toDouble();
         final columns = constraints.maxWidth >= 1020
             ? 4
             : constraints.maxWidth >= 720
@@ -1496,9 +1401,9 @@ class _FeatureLaunchGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            mainAxisExtent: 118,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            mainAxisExtent: tileExtent,
           ),
           itemBuilder: (context, index) {
             final feature = features[index];
@@ -1508,60 +1413,68 @@ class _FeatureLaunchGrid extends StatelessWidget {
               child: InkWell(
                 onTap: () => onFeatureTap(feature.title),
                 borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFE3E6EA)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                child: LayoutBuilder(
+                  builder: (context, tileConstraints) {
+                    final isCompact = tileConstraints.maxWidth < 260;
+                    final padding = isCompact ? 12.0 : 14.0;
+                    final iconBoxSize = isCompact ? 34.0 : 36.0;
+
+                    return Container(
+                      padding: EdgeInsets.all(padding),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE3E6EA)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: feature.accent.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              feature.icon,
-                              color: feature.accent,
-                              size: 20,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: iconBoxSize,
+                                height: iconBoxSize,
+                                decoration: BoxDecoration(
+                                  color: feature.accent.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  feature.icon,
+                                  color: feature.accent,
+                                  size: 20,
+                                ),
+                              ),
+                              const Spacer(),
+                              const Icon(
+                                Icons.arrow_forward,
+                                color: Color(0xFF98A2B3),
+                                size: 18,
+                              ),
+                            ],
                           ),
                           const Spacer(),
-                          const Icon(
-                            Icons.arrow_forward,
-                            color: Color(0xFF98A2B3),
-                            size: 18,
+                          Text(
+                            feature.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textDark,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            feature.category,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF667085),
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      Text(
-                        feature.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textDark,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        feature.category,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF667085),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
             );
@@ -1598,6 +1511,8 @@ class _RoleSummary extends StatelessWidget {
               children: [
                 Text(
                   account.fullName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: role.color,
                     fontWeight: FontWeight.w900,
@@ -1622,119 +1537,140 @@ class _RoleSummary extends StatelessWidget {
   }
 }
 
-class _PinnedFeaturePanel extends StatelessWidget {
-  const _PinnedFeaturePanel({
-    required this.entries,
-    required this.selectedFeatureIndex,
-    required this.onFeatureSelected,
+class _NavigationSegmentBar extends StatelessWidget {
+  const _NavigationSegmentBar({
+    required this.groups,
+    required this.selectedIndex,
+    required this.onSelected,
   });
 
-  final List<MapEntry<int, StaticFeature>> entries;
-  final int selectedFeatureIndex;
-  final ValueChanged<int> onFeatureSelected;
+  final List<_NavigationGroup> groups;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        children: entries
-            .map(
-              (entry) => _PinnedFeatureTile(
-                feature: entry.value,
-                selected: selectedFeatureIndex == entry.key,
-                onTap: () => onFeatureSelected(entry.key),
-              ),
-            )
-            .toList(),
+    if (groups.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: groups.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final group = groups[index];
+          return _NavigationSegmentChip(
+            group: group,
+            selected: index == selectedIndex,
+            onTap: () => onSelected(index),
+          );
+        },
       ),
     );
   }
 }
 
-class _PinnedFeatureTile extends StatelessWidget {
-  const _PinnedFeatureTile({
-    required this.feature,
+class _NavigationSegmentChip extends StatelessWidget {
+  const _NavigationSegmentChip({
+    required this.group,
     required this.selected,
     required this.onTap,
   });
 
-  final StaticFeature feature;
+  final _NavigationGroup group;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : feature.accent;
+    final foreground = selected ? AppColors.white : group.color;
+    final background = selected ? group.color : const Color(0xFFF8FAFC);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: selected ? const Color(0xFFE9ECFF) : const Color(0xFFF8FAFC),
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 62),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: selected ? AppColors.primary : const Color(0xFFE3E6EA),
+        child: Container(
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? group.color : const Color(0xFFE3E6EA),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(group.icon, color: foreground, size: 18),
+              const SizedBox(width: 7),
+              Text(
+                group.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? AppColors.white : AppColors.textDark,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(feature.icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        feature.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: selected
-                              ? AppColors.primary
-                              : AppColors.textDark,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        feature.category,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF667085),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF98A2B3),
-                  size: 20,
-                ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _NavigationGroupHeader extends StatelessWidget {
+  const _NavigationGroupHeader({required this.group});
+
+  final _NavigationGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: group.color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(group.icon, color: group.color, size: 20),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                group.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textDark,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                group.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFF667085), fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1914,10 +1850,348 @@ class _IconAction extends StatelessWidget {
   }
 }
 
-List<MapEntry<int, StaticFeature>> _pinnedFeatureEntries(PortalRole role) {
+class _NavigationGroup {
+  const _NavigationGroup({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.featureTitles,
+  });
+
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final List<String> featureTitles;
+}
+
+List<_NavigationGroup> _navigationGroupsForRole(PortalRole role) {
+  switch (role) {
+    case PortalRole.student:
+      return const [
+        _NavigationGroup(
+          title: 'Study',
+          description: 'Portal, classes, courses, tasks, marks',
+          icon: Icons.school_outlined,
+          color: Color(0xFF2A2D7E),
+          featureTitles: [
+            'Student Portal',
+            'Departments',
+            'Academic Calendar',
+            'Routine Management',
+            'Class Routine',
+            'Semester Courses',
+            'Assignments',
+            'Attendance',
+            'Quiz System',
+            'Results',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Finance',
+          description: 'Fees, receipts, scholarships',
+          icon: Icons.account_balance_wallet_outlined,
+          color: Color(0xFFCA8A04),
+          featureTitles: ['Tuition Fees', 'Payment History', 'Scholarships'],
+        ),
+        _NavigationGroup(
+          title: 'Campus',
+          description: 'Events, notices, support',
+          icon: Icons.campaign_outlined,
+          color: Color(0xFF007F3D),
+          featureTitles: [
+            'Events',
+            'Notice Board',
+            'Student Support',
+            'Lost and Found',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Connect',
+          description: 'Clubs and discussions',
+          icon: Icons.groups_2_outlined,
+          color: Color(0xFF0D9488),
+          featureTitles: ['Community Forum', 'Discussion Board'],
+        ),
+        _NavigationGroup(
+          title: 'Account',
+          description: 'Profile and preferences',
+          icon: Icons.account_circle_outlined,
+          color: Color(0xFF475569),
+          featureTitles: [
+            'Authentication',
+            'Profile',
+            'Notifications',
+            'Settings',
+          ],
+        ),
+      ];
+    case PortalRole.teacher:
+      return const [
+        _NavigationGroup(
+          title: 'Teaching',
+          description: 'Courses, attendance, marks',
+          icon: Icons.co_present_outlined,
+          color: Color(0xFF8B5E00),
+          featureTitles: [
+            'Teacher Portal',
+            'Semester Courses',
+            'Assignments',
+            'Attendance',
+            'Lecture Materials',
+            'Student Notices',
+            'Quiz System',
+            'Results',
+            'Marks Result',
+            'Academic Report',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Academic',
+          description: 'Departments, calendar, routine',
+          icon: Icons.calendar_month_outlined,
+          color: Color(0xFF2A2D7E),
+          featureTitles: [
+            'Departments',
+            'Academic Calendar',
+            'Routine Management',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Finance',
+          description: 'Receipts and payment history',
+          icon: Icons.account_balance_wallet_outlined,
+          color: Color(0xFFCA8A04),
+          featureTitles: ['Payment History'],
+        ),
+        _NavigationGroup(
+          title: 'Campus',
+          description: 'Events, notices, support',
+          icon: Icons.campaign_outlined,
+          color: Color(0xFF007F3D),
+          featureTitles: [
+            'Events',
+            'Notice Board',
+            'Lost and Found',
+            'Student Support',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Connect',
+          description: 'Clubs and discussions',
+          icon: Icons.groups_2_outlined,
+          color: Color(0xFF0D9488),
+          featureTitles: ['Community Forum', 'Discussion Board'],
+        ),
+        _NavigationGroup(
+          title: 'Account',
+          description: 'Profile and preferences',
+          icon: Icons.account_circle_outlined,
+          color: Color(0xFF475569),
+          featureTitles: [
+            'Authentication',
+            'Profile',
+            'Notifications',
+            'Settings',
+          ],
+        ),
+      ];
+    case PortalRole.faculty:
+      return const [
+        _NavigationGroup(
+          title: 'Management',
+          description: 'Departments, teachers, students',
+          icon: Icons.business_center_outlined,
+          color: Color(0xFF0F766E),
+          featureTitles: [
+            'Faculty Portal',
+            'Departments',
+            'Department Management',
+            'Teacher Management',
+            'Student Management',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Teaching',
+          description: 'Teacher tools and academic reports',
+          icon: Icons.co_present_outlined,
+          color: Color(0xFF8B5E00),
+          featureTitles: [
+            'Teacher Portal',
+            'Student Notices',
+            'Lecture Materials',
+            'Academic Report',
+            'Marks Result',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Academic',
+          description: 'Calendar, routine, reports',
+          icon: Icons.calendar_month_outlined,
+          color: Color(0xFF2A2D7E),
+          featureTitles: [
+            'Academic Calendar',
+            'Routine Management',
+            'Semester Courses',
+            'Assignments',
+            'Attendance',
+            'Quiz System',
+            'Results',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Finance',
+          description: 'Receipts and payment history',
+          icon: Icons.account_balance_wallet_outlined,
+          color: Color(0xFFCA8A04),
+          featureTitles: ['Payment History'],
+        ),
+        _NavigationGroup(
+          title: 'Campus',
+          description: 'Events, notices, support',
+          icon: Icons.campaign_outlined,
+          color: Color(0xFF007F3D),
+          featureTitles: [
+            'Events',
+            'Notice Board',
+            'Lost and Found',
+            'Student Support',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Connect',
+          description: 'Clubs and discussions',
+          icon: Icons.groups_2_outlined,
+          color: Color(0xFF0D9488),
+          featureTitles: ['Community Forum', 'Discussion Board'],
+        ),
+        _NavigationGroup(
+          title: 'Account',
+          description: 'Profile and preferences',
+          icon: Icons.account_circle_outlined,
+          color: Color(0xFF475569),
+          featureTitles: [
+            'Authentication',
+            'Profile',
+            'Notifications',
+            'Settings',
+          ],
+        ),
+      ];
+    case PortalRole.admin:
+      return const [
+        _NavigationGroup(
+          title: 'Admin',
+          description: 'Roles, audit, system',
+          icon: Icons.admin_panel_settings_outlined,
+          color: Color(0xFFB42318),
+          featureTitles: [
+            'Authentication',
+            'Administration Panel',
+            'User Roles',
+            'System Activity',
+            'Settings',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Portals',
+          description: 'Student, teacher, faculty spaces',
+          icon: Icons.dashboard_customize_outlined,
+          color: Color(0xFF0F766E),
+          featureTitles: ['Student Portal', 'Teacher Portal', 'Faculty Portal'],
+        ),
+        _NavigationGroup(
+          title: 'Academic',
+          description: 'Departments, routine, results',
+          icon: Icons.account_tree_outlined,
+          color: Color(0xFF2A2D7E),
+          featureTitles: [
+            'Departments',
+            'Department Management',
+            'Teacher Management',
+            'Student Management',
+            'Academic Calendar',
+            'Routine Management',
+            'Class Routine',
+            'Semester Courses',
+            'Assignments',
+            'Attendance',
+            'Student Notices',
+            'Lecture Materials',
+            'Academic Report',
+            'Marks Result',
+            'Quiz System',
+            'Results',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Finance',
+          description: 'Fees, receipts, scholarships',
+          icon: Icons.account_balance_wallet_outlined,
+          color: Color(0xFFCA8A04),
+          featureTitles: ['Tuition Fees', 'Payment History', 'Scholarships'],
+        ),
+        _NavigationGroup(
+          title: 'Campus',
+          description: 'Events, notices, support',
+          icon: Icons.campaign_outlined,
+          color: Color(0xFF007F3D),
+          featureTitles: [
+            'Events',
+            'Notice Board',
+            'Lost and Found',
+            'Student Support',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Connect',
+          description: 'Clubs and discussions',
+          icon: Icons.groups_2_outlined,
+          color: Color(0xFF0D9488),
+          featureTitles: ['Community Forum', 'Discussion Board'],
+        ),
+        _NavigationGroup(
+          title: 'Account',
+          description: 'Profile and alerts',
+          icon: Icons.account_circle_outlined,
+          color: Color(0xFF475569),
+          featureTitles: ['Profile', 'Notifications'],
+        ),
+      ];
+  }
+}
+
+List<MapEntry<int, StaticFeature>> _navigationEntriesForRole(PortalRole role) {
+  return staticFeatures.asMap().entries.where((entry) {
+    return entry.value.access.contains(role);
+  }).toList();
+}
+
+List<MapEntry<int, StaticFeature>> _navigationEntriesForGroups(
+  List<_NavigationGroup> groups,
+  PortalRole role,
+) {
   final entries = <MapEntry<int, StaticFeature>>[];
 
-  for (final title in _pinnedFeatureTitles(role)) {
+  for (final group in groups) {
+    for (final entry in _navigationEntriesForGroup(group, role)) {
+      if (entries.every((item) => item.key != entry.key)) {
+        entries.add(entry);
+      }
+    }
+  }
+
+  return entries;
+}
+
+List<MapEntry<int, StaticFeature>> _navigationEntriesForGroup(
+  _NavigationGroup group,
+  PortalRole role,
+) {
+  final entries = <MapEntry<int, StaticFeature>>[];
+
+  for (final title in group.featureTitles) {
     final index = staticFeatures.indexWhere((feature) {
       return feature.title == title && feature.access.contains(role);
     });
@@ -1929,139 +2203,12 @@ List<MapEntry<int, StaticFeature>> _pinnedFeatureEntries(PortalRole role) {
   return entries;
 }
 
-List<String> _pinnedFeatureTitles(PortalRole role) {
-  switch (role) {
-    case PortalRole.student:
-      return const [
-        'Class Routine',
-        'Assignments',
-        'Attendance',
-        'Tuition Fees',
-        'Results',
-        'Student Support',
-      ];
-    case PortalRole.teacher:
-      return const [
-        'Teacher Portal',
-        'Attendance',
-        'Lecture Materials',
-        'Student Notices',
-        'Marks Result',
-        'Academic Report',
-      ];
-    case PortalRole.faculty:
-      return const [
-        'Faculty Portal',
-        'Department Management',
-        'Teacher Management',
-        'Student Management',
-        'Routine Management',
-        'Payment History',
-      ];
-    case PortalRole.admin:
-      return const [
-        'Administration Panel',
-        'User Roles',
-        'System Activity',
-        'Events',
-        'Notice Board',
-        'Settings',
-      ];
+int _safeNavigationGroupIndex(int index, int length) {
+  if (length <= 0 || index < 0) {
+    return 0;
   }
-}
-
-List<String> _dashboardActions(PortalRole role) {
-  switch (role) {
-    case PortalRole.student:
-      return const [
-        'View routine',
-        'Submit assignment',
-        'Pay tuition',
-        'Open support',
-      ];
-    case PortalRole.teacher:
-      return const [
-        'Take attendance',
-        'Upload material',
-        'Publish notice',
-        'Review marks',
-      ];
-    case PortalRole.faculty:
-      return const [
-        'Manage department',
-        'Review payment',
-        'Approve routine',
-        'Export report',
-      ];
-    case PortalRole.admin:
-      return const [
-        'Manage roles',
-        'Audit activity',
-        'Publish notice',
-        'Review approvals',
-      ];
+  if (index >= length) {
+    return length - 1;
   }
-}
-
-Color _statusColor(String status) {
-  switch (status.toLowerCase()) {
-    case 'urgent':
-    case 'alert':
-    case 'due':
-    case 'flagged':
-    case 'security':
-      return const Color(0xFFB42318);
-    case 'open':
-    case 'pending':
-    case 'review':
-    case 'approval':
-    case 'draft':
-      return const Color(0xFFB54708);
-    case 'paid':
-    case 'published':
-    case 'approved':
-    case 'complete':
-    case 'verified':
-    case 'active':
-    case 'enabled':
-    case 'healthy':
-    case 'ready':
-    case 'live':
-    case 'saved':
-    case 'resolved':
-    case 'done':
-      return const Color(0xFF027A48);
-    default:
-      return const Color(0xFF344054);
-  }
-}
-
-IconData _actionIcon(String action) {
-  final lower = action.toLowerCase();
-  if (lower.contains('create') || lower.contains('add')) {
-    return Icons.add_circle_outline;
-  }
-  if (lower.contains('upload') || lower.contains('submit')) {
-    return Icons.upload_file_outlined;
-  }
-  if (lower.contains('download') || lower.contains('export')) {
-    return Icons.file_download_outlined;
-  }
-  if (lower.contains('pay')) {
-    return Icons.payments_outlined;
-  }
-  if (lower.contains('approve') || lower.contains('publish')) {
-    return Icons.verified_outlined;
-  }
-  if (lower.contains('view') || lower.contains('filter')) {
-    return Icons.visibility_outlined;
-  }
-  if (lower.contains('contact') || lower.contains('send')) {
-    return Icons.send_outlined;
-  }
-  if (lower.contains('logout')) {
-    return Icons.logout_outlined;
-  }
-
-  return Icons.bolt_outlined;
+  return index;
 }

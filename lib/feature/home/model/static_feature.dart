@@ -131,7 +131,7 @@ class DashboardProfile {
 class FeatureModuleModel {
   const FeatureModuleModel({
     required this.title,
-    this.category = 'Module',
+    this.category = 'Feature',
     this.description,
     this.icon,
     this.accent = const Color(0xFF2A2D7E),
@@ -168,7 +168,7 @@ class FeatureModuleModel {
 
 StaticFeature moduleFeature({
   required String title,
-  String category = 'Module',
+  String category = 'Feature',
   String? description,
   IconData? icon,
   Color accent = const Color(0xFF2A2D7E),
@@ -190,7 +190,7 @@ StaticFeature moduleFeature({
     category: category,
     description:
         description ??
-        'Manage $title records, actions, reports, and status for EUB Connect.',
+        'Review $title information, reports, and status for EUB Connect.',
     icon: moduleIcon,
     accent: accent,
     access: access,
@@ -198,7 +198,7 @@ StaticFeature moduleFeature({
         metrics ??
         const [
           StaticMetric(
-            label: 'Records',
+            label: 'Items',
             value: '24',
             note: 'Static entries',
             icon: Icons.folder_copy_outlined,
@@ -216,7 +216,7 @@ StaticFeature moduleFeature({
             icon: Icons.task_alt_outlined,
           ),
         ],
-    actions: actions ?? const ['Create record', 'Review list', 'Export report'],
+    actions: actions ?? const ['Create item', 'Review list', 'Export report'],
     records:
         records ??
         [
@@ -1027,7 +1027,7 @@ const staticFeatures = [
     title: 'Student Management',
     category: 'Faculty',
     description:
-        'Student records, enrollment status, advising notes, section assignment, and academic profile review.',
+        'Student profiles, enrollment status, advising notes, section assignment, and academic profile review.',
     icon: Icons.people_alt_outlined,
     accent: Color(0xFF2563EB),
     access: facultyAccess,
@@ -1401,7 +1401,7 @@ const staticFeatures = [
         'Assignment publishing, submissions, file upload status, feedback, and due-date tracking.',
     icon: Icons.assignment_outlined,
     accent: Color(0xFF4F46E5),
-    access: studentAccess,
+    access: allPortalRoles,
     metrics: [
       StaticMetric(
         label: 'Assigned',
@@ -2140,7 +2140,7 @@ const staticFeatures = [
     title: 'System Activity',
     category: 'Administration',
     description:
-        'System logs, login activity, role changes, backup status, moderation actions, and audit events.',
+        'System logs, login activity, role changes, backup status, moderation tasks, and audit events.',
     icon: Icons.history_outlined,
     accent: Color(0xFF6D28D9),
     access: adminAccess,
@@ -2201,7 +2201,7 @@ const staticFeatures = [
       StaticMetric(
         label: 'Unread',
         value: '17',
-        note: 'Across modules',
+        note: 'Across features',
         icon: Icons.mark_email_unread_outlined,
       ),
       StaticMetric(
