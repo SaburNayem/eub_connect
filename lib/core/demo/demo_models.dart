@@ -23,8 +23,9 @@ PortalRole demoRoleFromCode(String? code) {
   switch ((code ?? '').toLowerCase()) {
     case 'teacher':
       return PortalRole.teacher;
+    case 'administration':
     case 'faculty':
-      return PortalRole.faculty;
+      return PortalRole.administration;
     case 'admin':
       return PortalRole.admin;
     case 'student':
@@ -59,6 +60,8 @@ class DemoAccount {
     this.phone,
     this.address,
     this.emergencyContact,
+    this.officeId,
+    this.responsibilities = const [],
     this.cgpa,
     this.completedCredits = 0,
     this.currentCredits = 0,
@@ -82,6 +85,10 @@ class DemoAccount {
       phone: json['phone'] as String?,
       address: json['address'] as String?,
       emergencyContact: json['emergencyContact'] as String?,
+      officeId: json['officeId'] as String?,
+      responsibilities: List<String>.from(
+        json['responsibilities'] as List? ?? const [],
+      ),
       cgpa: json['cgpa'] as num?,
       completedCredits: json['completedCredits'] as int? ?? 0,
       currentCredits: json['currentCredits'] as int? ?? 0,
@@ -104,6 +111,8 @@ class DemoAccount {
   String? phone;
   String? address;
   String? emergencyContact;
+  String? officeId;
+  List<String> responsibilities;
   num? cgpa;
   int completedCredits;
   int currentCredits;
@@ -126,6 +135,8 @@ class DemoAccount {
       'phone': phone,
       'address': address,
       'emergencyContact': emergencyContact,
+      'officeId': officeId,
+      'responsibilities': responsibilities,
       'cgpa': cgpa,
       'completedCredits': completedCredits,
       'currentCredits': currentCredits,
@@ -161,6 +172,96 @@ class DemoDepartment {
   }
 }
 
+class DemoOffice {
+  const DemoOffice({
+    required this.id,
+    required this.name,
+    required this.shortName,
+    required this.headId,
+    required this.status,
+    required this.responsibilities,
+  });
+
+  factory DemoOffice.fromJson(JsonMap json) {
+    return DemoOffice(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      shortName: json['shortName'] as String,
+      headId: json['headId'] as String? ?? '',
+      status: json['status'] as String? ?? 'Operational',
+      responsibilities: List<String>.from(
+        json['responsibilities'] as List? ?? const [],
+      ),
+    );
+  }
+
+  final String id;
+  final String name;
+  final String shortName;
+  final String headId;
+  final String status;
+  final List<String> responsibilities;
+
+  JsonMap toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'shortName': shortName,
+      'headId': headId,
+      'status': status,
+      'responsibilities': responsibilities,
+    };
+  }
+}
+
+class DemoProgram {
+  const DemoProgram({
+    required this.id,
+    required this.departmentId,
+    required this.code,
+    required this.title,
+    required this.degreeType,
+    required this.totalCredits,
+    required this.duration,
+    this.status = 'Active',
+  });
+
+  factory DemoProgram.fromJson(JsonMap json) {
+    return DemoProgram(
+      id: json['id'] as String,
+      departmentId: json['departmentId'] as String,
+      code: json['code'] as String,
+      title: json['title'] as String,
+      degreeType: json['degreeType'] as String,
+      totalCredits: json['totalCredits'] as int,
+      duration: json['duration'] as String,
+      status: json['status'] as String? ?? 'Active',
+    );
+  }
+
+  final String id;
+  final String departmentId;
+  final String code;
+  final String title;
+  final String degreeType;
+  final int totalCredits;
+  final String duration;
+  final String status;
+
+  JsonMap toJson() {
+    return {
+      'id': id,
+      'departmentId': departmentId,
+      'code': code,
+      'title': title,
+      'degreeType': degreeType,
+      'totalCredits': totalCredits,
+      'duration': duration,
+      'status': status,
+    };
+  }
+}
+
 class DemoCourse {
   const DemoCourse({
     required this.id,
@@ -168,6 +269,8 @@ class DemoCourse {
     required this.code,
     required this.title,
     required this.credits,
+    this.programId,
+    this.prerequisite,
   });
 
   factory DemoCourse.fromJson(JsonMap json) {
@@ -177,6 +280,8 @@ class DemoCourse {
       code: json['code'] as String,
       title: json['title'] as String,
       credits: json['credits'] as int,
+      programId: json['programId'] as String?,
+      prerequisite: json['prerequisite'] as String?,
     );
   }
 
@@ -185,6 +290,8 @@ class DemoCourse {
   final String code;
   final String title;
   final int credits;
+  final String? programId;
+  final String? prerequisite;
 
   JsonMap toJson() {
     return {
@@ -193,6 +300,8 @@ class DemoCourse {
       'code': code,
       'title': title,
       'credits': credits,
+      'programId': programId,
+      'prerequisite': prerequisite,
     };
   }
 }
@@ -205,6 +314,9 @@ class DemoSection {
     required this.sectionCode,
     required this.semester,
     required this.capacity,
+    this.classroom,
+    this.schedule,
+    this.status = 'Active',
   });
 
   factory DemoSection.fromJson(JsonMap json) {
@@ -215,6 +327,9 @@ class DemoSection {
       sectionCode: json['sectionCode'] as String,
       semester: json['semester'] as String,
       capacity: json['capacity'] as int,
+      classroom: json['classroom'] as String?,
+      schedule: json['schedule'] as String?,
+      status: json['status'] as String? ?? 'Active',
     );
   }
 
@@ -224,6 +339,9 @@ class DemoSection {
   final String sectionCode;
   final String semester;
   final int capacity;
+  final String? classroom;
+  final String? schedule;
+  final String status;
 
   JsonMap toJson() {
     return {
@@ -233,6 +351,117 @@ class DemoSection {
       'sectionCode': sectionCode,
       'semester': semester,
       'capacity': capacity,
+      'classroom': classroom,
+      'schedule': schedule,
+      'status': status,
+    };
+  }
+}
+
+class DemoAcademicSemester {
+  const DemoAcademicSemester({
+    required this.id,
+    required this.name,
+    required this.registrationStart,
+    required this.registrationEnd,
+    required this.classStart,
+    required this.midtermStart,
+    required this.midtermEnd,
+    required this.finalStart,
+    required this.finalEnd,
+    required this.resultPublication,
+    required this.status,
+  });
+
+  factory DemoAcademicSemester.fromJson(JsonMap json) {
+    return DemoAcademicSemester(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      registrationStart: demoDate(json['registrationStart']),
+      registrationEnd: demoDate(json['registrationEnd']),
+      classStart: demoDate(json['classStart']),
+      midtermStart: demoDate(json['midtermStart']),
+      midtermEnd: demoDate(json['midtermEnd']),
+      finalStart: demoDate(json['finalStart']),
+      finalEnd: demoDate(json['finalEnd']),
+      resultPublication: demoDate(json['resultPublication']),
+      status: json['status'] as String? ?? 'Upcoming',
+    );
+  }
+
+  final String id;
+  final String name;
+  final DateTime registrationStart;
+  final DateTime registrationEnd;
+  final DateTime classStart;
+  final DateTime midtermStart;
+  final DateTime midtermEnd;
+  final DateTime finalStart;
+  final DateTime finalEnd;
+  final DateTime resultPublication;
+  final String status;
+
+  JsonMap toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'registrationStart': registrationStart.toIso8601String(),
+      'registrationEnd': registrationEnd.toIso8601String(),
+      'classStart': classStart.toIso8601String(),
+      'midtermStart': midtermStart.toIso8601String(),
+      'midtermEnd': midtermEnd.toIso8601String(),
+      'finalStart': finalStart.toIso8601String(),
+      'finalEnd': finalEnd.toIso8601String(),
+      'resultPublication': resultPublication.toIso8601String(),
+      'status': status,
+    };
+  }
+}
+
+class DemoCalendarEvent {
+  const DemoCalendarEvent({
+    required this.id,
+    required this.semesterId,
+    required this.title,
+    required this.type,
+    required this.startDate,
+    required this.endDate,
+    required this.audience,
+    required this.status,
+  });
+
+  factory DemoCalendarEvent.fromJson(JsonMap json) {
+    return DemoCalendarEvent(
+      id: json['id'] as String,
+      semesterId: json['semesterId'] as String,
+      title: json['title'] as String,
+      type: json['type'] as String,
+      startDate: demoDate(json['startDate']),
+      endDate: demoDate(json['endDate']),
+      audience: json['audience'] as String? ?? 'All',
+      status: json['status'] as String? ?? 'Scheduled',
+    );
+  }
+
+  final String id;
+  final String semesterId;
+  final String title;
+  final String type;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String audience;
+  final String status;
+
+  JsonMap toJson() {
+    return {
+      'id': id,
+      'semesterId': semesterId,
+      'title': title,
+      'type': type,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'audience': audience,
+      'status': status,
     };
   }
 }
@@ -644,6 +873,249 @@ class DemoQuizAttempt {
   }
 }
 
+class DemoExamSchedule {
+  DemoExamSchedule({
+    required this.id,
+    required this.courseId,
+    required this.sectionId,
+    required this.examType,
+    required this.room,
+    required this.date,
+    required this.start,
+    required this.end,
+    required this.invigilatorId,
+    required this.admitCardStatus,
+    required this.resultSubmissionStatus,
+    required this.resultApprovalStatus,
+    required this.resultPublicationStatus,
+    this.supplementaryCases = 0,
+  });
+
+  factory DemoExamSchedule.fromJson(JsonMap json) {
+    return DemoExamSchedule(
+      id: json['id'] as String,
+      courseId: json['courseId'] as String,
+      sectionId: json['sectionId'] as String,
+      examType: json['examType'] as String,
+      room: json['room'] as String,
+      date: demoDate(json['date']),
+      start: json['start'] as String,
+      end: json['end'] as String,
+      invigilatorId: json['invigilatorId'] as String,
+      admitCardStatus: json['admitCardStatus'] as String? ?? 'Pending',
+      resultSubmissionStatus:
+          json['resultSubmissionStatus'] as String? ?? 'Awaiting Submission',
+      resultApprovalStatus:
+          json['resultApprovalStatus'] as String? ?? 'Awaiting Review',
+      resultPublicationStatus:
+          json['resultPublicationStatus'] as String? ?? 'Not Published',
+      supplementaryCases: json['supplementaryCases'] as int? ?? 0,
+    );
+  }
+
+  final String id;
+  final String courseId;
+  final String sectionId;
+  final String examType;
+  String room;
+  DateTime date;
+  String start;
+  String end;
+  String invigilatorId;
+  String admitCardStatus;
+  String resultSubmissionStatus;
+  String resultApprovalStatus;
+  String resultPublicationStatus;
+  int supplementaryCases;
+
+  JsonMap toJson() {
+    return {
+      'id': id,
+      'courseId': courseId,
+      'sectionId': sectionId,
+      'examType': examType,
+      'room': room,
+      'date': date.toIso8601String(),
+      'start': start,
+      'end': end,
+      'invigilatorId': invigilatorId,
+      'admitCardStatus': admitCardStatus,
+      'resultSubmissionStatus': resultSubmissionStatus,
+      'resultApprovalStatus': resultApprovalStatus,
+      'resultPublicationStatus': resultPublicationStatus,
+      'supplementaryCases': supplementaryCases,
+    };
+  }
+}
+
+class DemoStudentRequest {
+  DemoStudentRequest({
+    required this.id,
+    required this.studentId,
+    required this.type,
+    required this.submittedAt,
+    required this.assignedOfficeId,
+    required this.priority,
+    required this.status,
+    required this.notes,
+    required this.timeline,
+    this.updatedAt,
+  });
+
+  factory DemoStudentRequest.fromJson(JsonMap json) {
+    return DemoStudentRequest(
+      id: json['id'] as String,
+      studentId: json['studentId'] as String,
+      type: json['type'] as String,
+      submittedAt: demoDate(json['submittedAt']),
+      assignedOfficeId: json['assignedOfficeId'] as String,
+      priority: json['priority'] as String? ?? 'Normal',
+      status: json['status'] as String? ?? 'Submitted',
+      notes: json['notes'] as String? ?? '',
+      timeline: List<String>.from(json['timeline'] as List? ?? const []),
+      updatedAt: demoNullableDate(json['updatedAt']),
+    );
+  }
+
+  final String id;
+  final String studentId;
+  String type;
+  DateTime submittedAt;
+  String assignedOfficeId;
+  String priority;
+  String status;
+  String notes;
+  List<String> timeline;
+  DateTime? updatedAt;
+
+  JsonMap toJson() {
+    return {
+      'id': id,
+      'studentId': studentId,
+      'type': type,
+      'submittedAt': submittedAt.toIso8601String(),
+      'assignedOfficeId': assignedOfficeId,
+      'priority': priority,
+      'status': status,
+      'notes': notes,
+      'timeline': timeline,
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
+}
+
+class DemoAdmissionApplication {
+  DemoAdmissionApplication({
+    required this.id,
+    required this.applicantName,
+    required this.programId,
+    required this.contact,
+    required this.previousEducation,
+    required this.applicationDate,
+    required this.documents,
+    required this.stage,
+    required this.paymentStatus,
+  });
+
+  factory DemoAdmissionApplication.fromJson(JsonMap json) {
+    return DemoAdmissionApplication(
+      id: json['id'] as String,
+      applicantName: json['applicantName'] as String,
+      programId: json['programId'] as String,
+      contact: json['contact'] as String,
+      previousEducation: json['previousEducation'] as String,
+      applicationDate: demoDate(json['applicationDate']),
+      documents: Map<String, bool>.from(json['documents'] as Map? ?? const {}),
+      stage: json['stage'] as String? ?? 'New',
+      paymentStatus: json['paymentStatus'] as String? ?? 'Pending',
+    );
+  }
+
+  final String id;
+  String applicantName;
+  String programId;
+  String contact;
+  String previousEducation;
+  DateTime applicationDate;
+  Map<String, bool> documents;
+  String stage;
+  String paymentStatus;
+
+  JsonMap toJson() {
+    return {
+      'id': id,
+      'applicantName': applicantName,
+      'programId': programId,
+      'contact': contact,
+      'previousEducation': previousEducation,
+      'applicationDate': applicationDate.toIso8601String(),
+      'documents': documents,
+      'stage': stage,
+      'paymentStatus': paymentStatus,
+    };
+  }
+}
+
+class DemoLostFoundItem {
+  DemoLostFoundItem({
+    required this.id,
+    required this.reporterId,
+    required this.type,
+    required this.title,
+    required this.description,
+    required this.location,
+    required this.reportedAt,
+    required this.contact,
+    required this.status,
+    this.matchedItemId,
+    this.claimNote,
+  });
+
+  factory DemoLostFoundItem.fromJson(JsonMap json) {
+    return DemoLostFoundItem(
+      id: json['id'] as String,
+      reporterId: json['reporterId'] as String,
+      type: json['type'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      location: json['location'] as String,
+      reportedAt: demoDate(json['reportedAt']),
+      contact: json['contact'] as String,
+      status: json['status'] as String? ?? 'Open',
+      matchedItemId: json['matchedItemId'] as String?,
+      claimNote: json['claimNote'] as String?,
+    );
+  }
+
+  final String id;
+  final String reporterId;
+  String type;
+  String title;
+  String description;
+  String location;
+  DateTime reportedAt;
+  String contact;
+  String status;
+  String? matchedItemId;
+  String? claimNote;
+
+  JsonMap toJson() {
+    return {
+      'id': id,
+      'reporterId': reporterId,
+      'type': type,
+      'title': title,
+      'description': description,
+      'location': location,
+      'reportedAt': reportedAt.toIso8601String(),
+      'contact': contact,
+      'status': status,
+      'matchedItemId': matchedItemId,
+      'claimNote': claimNote,
+    };
+  }
+}
+
 class DemoNotice {
   DemoNotice({
     required this.id,
@@ -653,6 +1125,12 @@ class DemoNotice {
     required this.target,
     required this.publishedAt,
     this.sectionId,
+    this.category = 'General',
+    this.audience,
+    this.expiryDate,
+    this.priority = 'Normal',
+    this.attachmentName,
+    this.status = 'Published',
   });
 
   factory DemoNotice.fromJson(JsonMap json) {
@@ -664,6 +1142,12 @@ class DemoNotice {
       target: json['target'] as String,
       publishedAt: demoDate(json['publishedAt']),
       sectionId: json['sectionId'] as String?,
+      category: json['category'] as String? ?? 'General',
+      audience: json['audience'] as String?,
+      expiryDate: demoNullableDate(json['expiryDate']),
+      priority: json['priority'] as String? ?? 'Normal',
+      attachmentName: json['attachmentName'] as String?,
+      status: json['status'] as String? ?? 'Published',
     );
   }
 
@@ -674,6 +1158,12 @@ class DemoNotice {
   String target;
   DateTime publishedAt;
   String? sectionId;
+  String category;
+  String? audience;
+  DateTime? expiryDate;
+  String priority;
+  String? attachmentName;
+  String status;
 
   JsonMap toJson() {
     return {
@@ -684,6 +1174,12 @@ class DemoNotice {
       'target': target,
       'publishedAt': publishedAt.toIso8601String(),
       'sectionId': sectionId,
+      'category': category,
+      'audience': audience,
+      'expiryDate': expiryDate?.toIso8601String(),
+      'priority': priority,
+      'attachmentName': attachmentName,
+      'status': status,
     };
   }
 }
@@ -698,6 +1194,8 @@ class DemoEvent {
     required this.organizer,
     required this.capacity,
     required this.status,
+    this.time = '10:00 AM',
+    this.audience = 'All',
   });
 
   factory DemoEvent.fromJson(JsonMap json) {
@@ -710,6 +1208,8 @@ class DemoEvent {
       organizer: json['organizer'] as String,
       capacity: json['capacity'] as int,
       status: json['status'] as String? ?? 'published',
+      time: json['time'] as String? ?? '10:00 AM',
+      audience: json['audience'] as String? ?? 'All',
     );
   }
 
@@ -721,6 +1221,8 @@ class DemoEvent {
   String organizer;
   int capacity;
   String status;
+  String time;
+  String audience;
 
   JsonMap toJson() {
     return {
@@ -732,6 +1234,8 @@ class DemoEvent {
       'organizer': organizer,
       'capacity': capacity,
       'status': status,
+      'time': time,
+      'audience': audience,
     };
   }
 }
@@ -1005,6 +1509,11 @@ class DemoSupportTicket {
     required this.priority,
     required this.status,
     required this.createdAt,
+    this.description = '',
+    this.assignedOfficeId,
+    this.userRole,
+    this.lastUpdated,
+    this.resolution,
   });
 
   factory DemoSupportTicket.fromJson(JsonMap json) {
@@ -1016,6 +1525,11 @@ class DemoSupportTicket {
       priority: json['priority'] as String,
       status: json['status'] as String? ?? 'open',
       createdAt: demoDate(json['createdAt']),
+      description: json['description'] as String? ?? '',
+      assignedOfficeId: json['assignedOfficeId'] as String?,
+      userRole: json['userRole'] as String?,
+      lastUpdated: demoNullableDate(json['lastUpdated']),
+      resolution: json['resolution'] as String?,
     );
   }
 
@@ -1026,6 +1540,11 @@ class DemoSupportTicket {
   String priority;
   String status;
   DateTime createdAt;
+  String description;
+  String? assignedOfficeId;
+  String? userRole;
+  DateTime? lastUpdated;
+  String? resolution;
 
   JsonMap toJson() {
     return {
@@ -1036,6 +1555,11 @@ class DemoSupportTicket {
       'priority': priority,
       'status': status,
       'createdAt': createdAt.toIso8601String(),
+      'description': description,
+      'assignedOfficeId': assignedOfficeId,
+      'userRole': userRole,
+      'lastUpdated': lastUpdated?.toIso8601String(),
+      'resolution': resolution,
     };
   }
 }
@@ -1134,6 +1658,8 @@ class DemoPayment {
     required this.method,
     required this.paidAt,
     required this.receiptNo,
+    this.status = 'Verified',
+    this.reference,
   });
 
   factory DemoPayment.fromJson(JsonMap json) {
@@ -1145,6 +1671,8 @@ class DemoPayment {
       method: json['method'] as String,
       paidAt: demoDate(json['paidAt']),
       receiptNo: json['receiptNo'] as String,
+      status: json['status'] as String? ?? 'Verified',
+      reference: json['reference'] as String?,
     );
   }
 
@@ -1155,6 +1683,8 @@ class DemoPayment {
   String method;
   DateTime paidAt;
   String receiptNo;
+  String status;
+  String? reference;
 
   JsonMap toJson() {
     return {
@@ -1165,6 +1695,8 @@ class DemoPayment {
       'method': method,
       'paidAt': paidAt.toIso8601String(),
       'receiptNo': receiptNo,
+      'status': status,
+      'reference': reference,
     };
   }
 }
@@ -1260,6 +1792,7 @@ class DemoNotification {
     required this.title,
     required this.body,
     required this.createdAt,
+    this.category = 'System',
     this.read = false,
   });
 
@@ -1270,6 +1803,7 @@ class DemoNotification {
       title: json['title'] as String,
       body: json['body'] as String,
       createdAt: demoDate(json['createdAt']),
+      category: json['category'] as String? ?? 'System',
       read: json['read'] as bool? ?? false,
     );
   }
@@ -1279,6 +1813,7 @@ class DemoNotification {
   String title;
   String body;
   DateTime createdAt;
+  String category;
   bool read;
 
   JsonMap toJson() {
@@ -1288,6 +1823,7 @@ class DemoNotification {
       'title': title,
       'body': body,
       'createdAt': createdAt.toIso8601String(),
+      'category': category,
       'read': read,
     };
   }
@@ -1340,6 +1876,8 @@ class DemoActivity {
     required this.title,
     required this.detail,
     required this.createdAt,
+    this.category = 'System',
+    this.target,
   });
 
   factory DemoActivity.fromJson(JsonMap json) {
@@ -1349,6 +1887,8 @@ class DemoActivity {
       title: json['title'] as String,
       detail: json['detail'] as String,
       createdAt: demoDate(json['createdAt']),
+      category: json['category'] as String? ?? 'System',
+      target: json['target'] as String?,
     );
   }
 
@@ -1357,6 +1897,8 @@ class DemoActivity {
   String title;
   String detail;
   DateTime createdAt;
+  String category;
+  String? target;
 
   JsonMap toJson() {
     return {
@@ -1365,6 +1907,8 @@ class DemoActivity {
       'title': title,
       'detail': detail,
       'createdAt': createdAt.toIso8601String(),
+      'category': category,
+      'target': target,
     };
   }
 }

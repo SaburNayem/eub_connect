@@ -64,8 +64,9 @@ PortalRole portalRoleFromCode(String? code) {
   switch ((code ?? '').toLowerCase()) {
     case 'teacher':
       return PortalRole.teacher;
+    case 'administration':
     case 'faculty':
-      return PortalRole.faculty;
+      return PortalRole.administration;
     case 'admin':
       return PortalRole.admin;
     case 'student':

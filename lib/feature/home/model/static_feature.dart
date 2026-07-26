@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum PortalRole { student, teacher, faculty, admin }
+enum PortalRole { student, teacher, administration, admin }
 
 extension PortalRoleDetails on PortalRole {
   String get code {
@@ -9,8 +9,8 @@ extension PortalRoleDetails on PortalRole {
         return 'student';
       case PortalRole.teacher:
         return 'teacher';
-      case PortalRole.faculty:
-        return 'faculty';
+      case PortalRole.administration:
+        return 'administration';
       case PortalRole.admin:
         return 'admin';
     }
@@ -22,8 +22,8 @@ extension PortalRoleDetails on PortalRole {
         return 'Student';
       case PortalRole.teacher:
         return 'Teacher';
-      case PortalRole.faculty:
-        return 'Faculty';
+      case PortalRole.administration:
+        return 'Administration';
       case PortalRole.admin:
         return 'Admin';
     }
@@ -35,8 +35,8 @@ extension PortalRoleDetails on PortalRole {
         return 'Courses, attendance, results, fees, support';
       case PortalRole.teacher:
         return 'Teaching, attendance, grading, notices';
-      case PortalRole.faculty:
-        return 'Departments, teachers, students, reports';
+      case PortalRole.administration:
+        return 'Office workflows, approvals, requests, and student services';
       case PortalRole.admin:
         return 'Users, roles, approvals, audit, settings';
     }
@@ -48,7 +48,7 @@ extension PortalRoleDetails on PortalRole {
         return Icons.person_outline;
       case PortalRole.teacher:
         return Icons.co_present_outlined;
-      case PortalRole.faculty:
+      case PortalRole.administration:
         return Icons.business_center_outlined;
       case PortalRole.admin:
         return Icons.admin_panel_settings_outlined;
@@ -61,8 +61,8 @@ extension PortalRoleDetails on PortalRole {
         return const Color(0xFF2A2D7E);
       case PortalRole.teacher:
         return const Color(0xFF007F3D);
-      case PortalRole.faculty:
-        return const Color(0xFF8B5E00);
+      case PortalRole.administration:
+        return const Color(0xFF0F766E);
       case PortalRole.admin:
         return const Color(0xFFB42318);
     }
@@ -90,6 +90,8 @@ class StaticRecord {
     required this.meta,
     required this.status,
     required this.icon,
+    this.details = const <String, String>{},
+    this.sections = const <String, List<StaticRecord>>{},
   });
 
   final String title;
@@ -97,6 +99,8 @@ class StaticRecord {
   final String meta;
   final String status;
   final IconData icon;
+  final Map<String, String> details;
+  final Map<String, List<StaticRecord>> sections;
 }
 
 class StaticFeature {
@@ -227,17 +231,13 @@ IconData moduleFallbackIcon(String title) {
 const allPortalRoles = [
   PortalRole.student,
   PortalRole.teacher,
-  PortalRole.faculty,
+  PortalRole.administration,
   PortalRole.admin,
 ];
 
 const studentAccess = [PortalRole.student, PortalRole.admin];
-const teacherAccess = [
-  PortalRole.teacher,
-  PortalRole.faculty,
-  PortalRole.admin,
-];
-const facultyAccess = [PortalRole.faculty, PortalRole.admin];
+const teacherAccess = [PortalRole.teacher, PortalRole.admin];
+const administrationAccess = [PortalRole.administration, PortalRole.admin];
 const adminAccess = [PortalRole.admin];
 
 const dashboardProfiles = [
@@ -254,16 +254,15 @@ const dashboardProfiles = [
         'Assigned sections, attendance, assignments, quizzes, materials, and grading.',
   ),
   DashboardProfile(
-    role: PortalRole.faculty,
-    headline: 'Faculty workspace',
+    role: PortalRole.administration,
+    headline: 'Administration workspace',
     summary:
-        'Departments, courses, teachers, students, schedules, results, and reports.',
+        'Office-specific requests, approvals, documents, support, notices, and service tasks.',
   ),
   DashboardProfile(
     role: PortalRole.admin,
-    headline: 'Admin workspace',
-    summary:
-        'Users, roles, approvals, audit logs, moderation, configuration, and oversight.',
+    headline: 'European University of Bangladesh',
+    summary: 'Administration & System Overview for the local EUB Connect demo.',
   ),
 ];
 
@@ -296,19 +295,19 @@ const staticFeatures = [
     access: teacherAccess,
   ),
   StaticFeature(
-    title: 'Faculty Portal',
+    title: 'Administration Portal',
     category: 'Portal',
     description:
-        'Faculty oversight for departments, academic records, teachers, students, schedules, and reports.',
+        'Office-based university administration for registrar, examination, accounts, ICT, IQAC, proctor, and student affairs work.',
     icon: Icons.business_center_outlined,
     accent: Color(0xFF0F766E),
-    access: facultyAccess,
+    access: administrationAccess,
   ),
   StaticFeature(
-    title: 'Administration Panel',
+    title: 'Admin Dashboard',
     category: 'Admin',
     description:
-        'System administration for users, roles, approvals, moderation, audit logs, and settings.',
+        'University-wide command center for academic operations, finance, admissions, examinations, offices, support, and system activity.',
     icon: Icons.admin_panel_settings_outlined,
     accent: Color(0xFFB42318),
     access: adminAccess,
@@ -323,29 +322,119 @@ const staticFeatures = [
   ),
   StaticFeature(
     title: 'Department Management',
-    category: 'Faculty',
+    category: 'Academic',
     description: 'Department, program, head, contact, and status management.',
     icon: Icons.account_balance_outlined,
     accent: Color(0xFF0F766E),
-    access: facultyAccess,
+    access: administrationAccess,
+  ),
+  StaticFeature(
+    title: 'Programs',
+    category: 'Academic',
+    description:
+        'Program catalog with department, degree type, credits, duration, and active student counts.',
+    icon: Icons.school_outlined,
+    accent: Color(0xFF2A2D7E),
+    access: administrationAccess,
+  ),
+  StaticFeature(
+    title: 'Courses',
+    category: 'Academic',
+    description:
+        'Course catalog connected to departments, programs, credits, prerequisites, sections, and teachers.',
+    icon: Icons.menu_book_outlined,
+    accent: Color(0xFF2A2D7E),
+    access: allPortalRoles,
+  ),
+  StaticFeature(
+    title: 'Sections',
+    category: 'Academic',
+    description:
+        'Current semester sections with teacher, schedule, classroom, capacity, and enrollment.',
+    icon: Icons.class_outlined,
+    accent: Color(0xFF2A2D7E),
+    access: administrationAccess,
   ),
   StaticFeature(
     title: 'Teacher Management',
-    category: 'Faculty',
+    category: 'People',
     description:
         'Teacher directory, department assignment, workload, and verification.',
     icon: Icons.co_present_outlined,
     accent: Color(0xFF0F766E),
-    access: facultyAccess,
+    access: administrationAccess,
   ),
   StaticFeature(
     title: 'Student Management',
-    category: 'Faculty',
+    category: 'People',
     description:
         'Student records, enrollment, advising, attendance, and academic standing.',
     icon: Icons.groups_outlined,
     accent: Color(0xFF0F766E),
-    access: facultyAccess,
+    access: administrationAccess,
+  ),
+  StaticFeature(
+    title: 'Administration Staff',
+    category: 'People',
+    description:
+        'Administrative employee directory with office, designation, responsibilities, tasks, and status.',
+    icon: Icons.badge_outlined,
+    accent: Color(0xFF0F766E),
+    access: adminAccess,
+  ),
+  StaticFeature(
+    title: 'Admissions',
+    category: 'Operations',
+    description:
+        'Applicant records, document review, eligibility, approval, payment, and registration stages.',
+    icon: Icons.how_to_reg_outlined,
+    accent: Color(0xFF0F766E),
+    access: administrationAccess,
+  ),
+  StaticFeature(
+    title: 'Examinations',
+    category: 'Operations',
+    description:
+        'Exam schedules, rooms, invigilators, admit cards, result submission, approval, and publication.',
+    icon: Icons.assignment_turned_in_outlined,
+    accent: Color(0xFF7C3AED),
+    access: administrationAccess,
+  ),
+  StaticFeature(
+    title: 'Student Requests',
+    category: 'Operations',
+    description:
+        'Transcript, certificate, ID card, registration, payment, result, and supplementary exam requests.',
+    icon: Icons.request_page_outlined,
+    accent: Color(0xFF0F766E),
+    access: allPortalRoles,
+  ),
+  StaticFeature(
+    title: 'Invoices',
+    category: 'Finance',
+    description:
+        'Semester invoices with tuition, registration fee, exam fee, other fees, waivers, payments, and due.',
+    icon: Icons.receipt_long_outlined,
+    accent: Color(0xFFCA8A04),
+    access: administrationAccess,
+  ),
+  StaticFeature(
+    title: 'Payments',
+    category: 'Finance',
+    description:
+        'Payment transactions with invoice reference, method, status, receipt, and student ledger context.',
+    icon: Icons.payments_outlined,
+    accent: Color(0xFFCA8A04),
+    access: administrationAccess,
+  ),
+  StaticFeature(
+    title: 'Scholarships/Waivers',
+    category: 'Finance',
+    description:
+        'Scholarship and waiver cases connected to student ledgers and approval workflows.',
+    icon: Icons.workspace_premium_outlined,
+    accent: Color(0xFFCA8A04),
+    access: administrationAccess,
   ),
   StaticFeature(
     title: 'Events',
@@ -382,6 +471,15 @@ const staticFeatures = [
     icon: Icons.calendar_today_outlined,
     accent: Color(0xFF2A2D7E),
     access: allPortalRoles,
+  ),
+  StaticFeature(
+    title: 'Activity Log',
+    category: 'System',
+    description:
+        'Searchable audit log for result publication, payment recording, requests, notices, moderation, support, and system activity.',
+    icon: Icons.history_outlined,
+    accent: Color(0xFFB42318),
+    access: adminAccess,
   ),
   StaticFeature(
     title: 'Lost and Found',
@@ -465,6 +563,15 @@ const staticFeatures = [
     access: allPortalRoles,
   ),
   StaticFeature(
+    title: 'Clubs',
+    category: 'Engagement',
+    description:
+        'Club directory with advisors, presidents, active members, event links, and membership status.',
+    icon: Icons.groups_2_outlined,
+    accent: Color(0xFF0D9488),
+    access: allPortalRoles,
+  ),
+  StaticFeature(
     title: 'Discussion Board',
     category: 'Communication',
     description:
@@ -472,6 +579,15 @@ const staticFeatures = [
     icon: Icons.forum_outlined,
     accent: Color(0xFF0D9488),
     access: allPortalRoles,
+  ),
+  StaticFeature(
+    title: 'Community Moderation',
+    category: 'Engagement',
+    description:
+        'Reported posts and comments with author, reporter, reason, content, status, and moderation actions.',
+    icon: Icons.report_outlined,
+    accent: Color(0xFFB42318),
+    access: adminAccess,
   ),
   StaticFeature(
     title: 'Tuition Fees',
@@ -571,6 +687,24 @@ const staticFeatures = [
     icon: Icons.support_agent_outlined,
     accent: Color(0xFF007F3D),
     access: allPortalRoles,
+  ),
+  StaticFeature(
+    title: 'Support Tickets',
+    category: 'Support',
+    description:
+        'Office-routed ticket management with priority, status, requester, last update, and resolution.',
+    icon: Icons.support_agent_outlined,
+    accent: Color(0xFF007F3D),
+    access: administrationAccess,
+  ),
+  StaticFeature(
+    title: 'Complaints/Cases',
+    category: 'Support',
+    description:
+        'Proctor and escalated case management for complaints, discipline issues, investigations, and resolutions.',
+    icon: Icons.gavel_outlined,
+    accent: Color(0xFF7C3AED),
+    access: administrationAccess,
   ),
   StaticFeature(
     title: 'Semester Courses',

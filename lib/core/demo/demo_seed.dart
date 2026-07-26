@@ -5,10 +5,14 @@ class DemoSeed {
   const DemoSeed._();
 
   static JsonMap snapshot() {
+    final offices = _offices();
     final departments = _departments();
+    final programs = _programs();
     final accounts = _accounts();
     final courses = _courses();
     final sections = _sections();
+    final academicSemesters = _academicSemesters();
+    final calendarEvents = _calendarEvents();
     final enrollments = _enrollments();
     final schedules = _schedules();
     final attendance = _attendance(enrollments);
@@ -16,11 +20,15 @@ class DemoSeed {
     final submissions = _submissions();
     final quizzes = _quizzes();
     final attempts = _quizAttempts();
+    final examSchedules = _examSchedules(sections);
+    final studentRequests = _studentRequests();
+    final admissions = _admissions();
     final notices = _notices();
     final events = _events();
     final eventRegistrations = _eventRegistrations();
     final clubs = _clubs();
     final clubMemberships = _clubMemberships();
+    final lostFoundItems = _lostFoundItems();
     final forumCategories = _forumCategories();
     final forumPosts = _forumPosts();
     final forumComments = _forumComments(forumPosts);
@@ -28,7 +36,7 @@ class DemoSeed {
     final tickets = _supportTickets();
     final messages = _supportMessages();
     final invoices = _invoices();
-    final payments = _payments();
+    final payments = _payments(invoices);
     final results = _results();
     final scholarships = _scholarships();
     final notifications = _notifications();
@@ -37,9 +45,15 @@ class DemoSeed {
 
     return {
       'accounts': accounts.map((item) => item.toJson()).toList(),
+      'offices': offices.map((item) => item.toJson()).toList(),
       'departments': departments.map((item) => item.toJson()).toList(),
+      'programs': programs.map((item) => item.toJson()).toList(),
       'courses': courses.map((item) => item.toJson()).toList(),
       'sections': sections.map((item) => item.toJson()).toList(),
+      'academicSemesters': academicSemesters
+          .map((item) => item.toJson())
+          .toList(),
+      'calendarEvents': calendarEvents.map((item) => item.toJson()).toList(),
       'enrollments': enrollments.map((item) => item.toJson()).toList(),
       'schedules': schedules.map((item) => item.toJson()).toList(),
       'attendance': attendance.map((item) => item.toJson()).toList(),
@@ -47,6 +61,9 @@ class DemoSeed {
       'submissions': submissions.map((item) => item.toJson()).toList(),
       'quizzes': quizzes.map((item) => item.toJson()).toList(),
       'quizAttempts': attempts.map((item) => item.toJson()).toList(),
+      'examSchedules': examSchedules.map((item) => item.toJson()).toList(),
+      'studentRequests': studentRequests.map((item) => item.toJson()).toList(),
+      'admissions': admissions.map((item) => item.toJson()).toList(),
       'notices': notices.map((item) => item.toJson()).toList(),
       'events': events.map((item) => item.toJson()).toList(),
       'eventRegistrations': eventRegistrations
@@ -54,6 +71,7 @@ class DemoSeed {
           .toList(),
       'clubs': clubs.map((item) => item.toJson()).toList(),
       'clubMemberships': clubMemberships.map((item) => item.toJson()).toList(),
+      'lostFoundItems': lostFoundItems.map((item) => item.toJson()).toList(),
       'forumCategories': forumCategories.map((item) => item.toJson()).toList(),
       'forumPosts': forumPosts.map((item) => item.toJson()).toList(),
       'forumComments': forumComments.map((item) => item.toJson()).toList(),
@@ -69,6 +87,159 @@ class DemoSeed {
       'activities': activities.map((item) => item.toJson()).toList(),
       'currentAccountId': null,
     };
+  }
+
+  static List<DemoOffice> _offices() {
+    return const [
+      DemoOffice(
+        id: 'office-registrar',
+        name: 'Office of the Registrar',
+        shortName: 'Registrar',
+        headId: 'u-admstaff-001',
+        status: 'Operational',
+        responsibilities: [
+          'Student records',
+          'Registration verification',
+          'Academic documents',
+          'Certificate coordination',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-accounts',
+        name: 'Office of the Treasurer / Accounts',
+        shortName: 'Accounts',
+        headId: 'u-admstaff-002',
+        status: 'Operational',
+        responsibilities: [
+          'Student ledger',
+          'Payment verification',
+          'Waiver cases',
+          'Financial clearance',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-exams',
+        name: 'Office of the Controller of Examinations',
+        shortName: 'Examinations',
+        headId: 'u-admstaff-003',
+        status: 'Operational',
+        responsibilities: [
+          'Exam schedules',
+          'Admit cards',
+          'Result review',
+          'Transcript and certificate requests',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-admission',
+        name: 'Admission & Student Affairs',
+        shortName: 'Admissions',
+        headId: 'u-admstaff-004',
+        status: 'Operational',
+        responsibilities: [
+          'Admission applications',
+          'Student service desk',
+          'Events and clubs',
+          'Registration progress',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-planning',
+        name: 'Planning & Development',
+        shortName: 'P&D',
+        headId: 'u-admstaff-005',
+        status: 'Monitoring',
+        responsibilities: [
+          'Campus planning',
+          'Policy follow-up',
+          'Development tasks',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-program',
+        name: 'Program Coordination Department',
+        shortName: 'Program Coordination',
+        headId: 'u-admstaff-006',
+        status: 'Operational',
+        responsibilities: [
+          'Program records',
+          'Section coordination',
+          'Department follow-up',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-library',
+        name: 'Library & Module Archive',
+        shortName: 'Library',
+        headId: 'u-admstaff-007',
+        status: 'Operational',
+        responsibilities: [
+          'Module archive',
+          'Library service cases',
+          'Clearance support',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-procurement',
+        name: 'Procurement & Inventory',
+        shortName: 'Inventory',
+        headId: 'u-admstaff-008',
+        status: 'Operational',
+        responsibilities: [
+          'Procurement requests',
+          'Inventory status',
+          'Equipment issues',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-iqac',
+        name: 'Office of the IQAC',
+        shortName: 'IQAC',
+        headId: 'u-admstaff-009',
+        status: 'Review Cycle',
+        responsibilities: [
+          'Quality review',
+          'Course evaluation',
+          'Department performance reports',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-ict',
+        name: 'ICT & Laboratory',
+        shortName: 'ICT',
+        headId: 'u-admstaff-010',
+        status: 'Operational',
+        responsibilities: [
+          'Portal support',
+          'Laboratory status',
+          'Equipment tickets',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-proctor',
+        name: 'Office of the Proctor',
+        shortName: 'Proctor',
+        headId: 'u-admstaff-011',
+        status: 'Operational',
+        responsibilities: [
+          'Complaints',
+          'Discipline cases',
+          'Incident reports',
+        ],
+      ),
+      DemoOffice(
+        id: 'office-ccc',
+        name: 'Office of the CCC',
+        shortName: 'CCC',
+        headId: 'u-admstaff-012',
+        status: 'Operational',
+        responsibilities: [
+          'Career services',
+          'Club coordination',
+          'Skill events',
+        ],
+      ),
+    ];
   }
 
   static List<DemoDepartment> _departments() {
@@ -102,6 +273,225 @@ class DemoSeed {
         name: 'Civil Engineering',
         shortName: 'CE',
         faculty: 'Faculty of Science and Engineering',
+      ),
+      DemoDepartment(
+        id: 'dept-ipe',
+        name: 'Industrial and Production Engineering',
+        shortName: 'IPE',
+        faculty: 'Faculty of Science and Engineering',
+      ),
+      DemoDepartment(
+        id: 'dept-textile',
+        name: 'Textile Engineering',
+        shortName: 'TE',
+        faculty: 'Faculty of Science and Engineering',
+      ),
+      DemoDepartment(
+        id: 'dept-law',
+        name: 'Law',
+        shortName: 'LAW',
+        faculty: 'Faculty of Arts and Social Sciences',
+      ),
+      DemoDepartment(
+        id: 'dept-economics',
+        name: 'Economics',
+        shortName: 'ECO',
+        faculty: 'Faculty of Arts and Social Sciences',
+      ),
+    ];
+  }
+
+  static List<DemoProgram> _programs() {
+    return const [
+      DemoProgram(
+        id: 'program-cse-bsc',
+        departmentId: 'dept-cse',
+        code: 'BSC-CSE',
+        title: 'B.Sc. in Computer Science and Engineering',
+        degreeType: 'Undergraduate',
+        totalCredits: 160,
+        duration: '4 years',
+      ),
+      DemoProgram(
+        id: 'program-eee-bsc',
+        departmentId: 'dept-eee',
+        code: 'BSC-EEE',
+        title: 'B.Sc. in Electrical and Electronic Engineering',
+        degreeType: 'Undergraduate',
+        totalCredits: 160,
+        duration: '4 years',
+      ),
+      DemoProgram(
+        id: 'program-ce-bsc',
+        departmentId: 'dept-ce',
+        code: 'BSC-CE',
+        title: 'B.Sc. in Civil Engineering',
+        degreeType: 'Undergraduate',
+        totalCredits: 165,
+        duration: '4 years',
+      ),
+      DemoProgram(
+        id: 'program-ipe-bsc',
+        departmentId: 'dept-ipe',
+        code: 'BSC-IPE',
+        title: 'B.Sc. in Industrial and Production Engineering',
+        degreeType: 'Undergraduate',
+        totalCredits: 160,
+        duration: '4 years',
+      ),
+      DemoProgram(
+        id: 'program-bba',
+        departmentId: 'dept-bba',
+        code: 'BBA',
+        title: 'Bachelor of Business Administration',
+        degreeType: 'Undergraduate',
+        totalCredits: 126,
+        duration: '4 years',
+      ),
+      DemoProgram(
+        id: 'program-mba',
+        departmentId: 'dept-bba',
+        code: 'MBA',
+        title: 'Master of Business Administration',
+        degreeType: 'Graduate',
+        totalCredits: 60,
+        duration: '2 years',
+      ),
+      DemoProgram(
+        id: 'program-eng-ba',
+        departmentId: 'dept-eng',
+        code: 'BA-ENG',
+        title: 'B.A. in English',
+        degreeType: 'Undergraduate',
+        totalCredits: 120,
+        duration: '4 years',
+      ),
+      DemoProgram(
+        id: 'program-law-llb',
+        departmentId: 'dept-law',
+        code: 'LLB',
+        title: 'Bachelor of Laws',
+        degreeType: 'Undergraduate',
+        totalCredits: 135,
+        duration: '4 years',
+      ),
+      DemoProgram(
+        id: 'program-eco-bss',
+        departmentId: 'dept-economics',
+        code: 'BSS-ECO',
+        title: 'BSS in Economics',
+        degreeType: 'Undergraduate',
+        totalCredits: 126,
+        duration: '4 years',
+      ),
+    ];
+  }
+
+  static List<DemoAcademicSemester> _academicSemesters() {
+    return [
+      DemoAcademicSemester(
+        id: 'sem-fall-2025',
+        name: 'Fall 2025',
+        registrationStart: DateTime(2025, 9, 1),
+        registrationEnd: DateTime(2025, 9, 12),
+        classStart: DateTime(2025, 9, 15),
+        midtermStart: DateTime(2025, 11, 1),
+        midtermEnd: DateTime(2025, 11, 12),
+        finalStart: DateTime(2026, 1, 3),
+        finalEnd: DateTime(2026, 1, 14),
+        resultPublication: DateTime(2026, 1, 30),
+        status: 'Completed',
+      ),
+      DemoAcademicSemester(
+        id: 'sem-spring-2026',
+        name: 'Spring 2026',
+        registrationStart: DateTime(2026, 1, 5),
+        registrationEnd: DateTime(2026, 1, 16),
+        classStart: DateTime(2026, 1, 18),
+        midtermStart: DateTime(2026, 3, 10),
+        midtermEnd: DateTime(2026, 3, 21),
+        finalStart: DateTime(2026, 7, 29),
+        finalEnd: DateTime(2026, 8, 12),
+        resultPublication: DateTime(2026, 8, 30),
+        status: 'Current',
+      ),
+      DemoAcademicSemester(
+        id: 'sem-summer-2026',
+        name: 'Summer 2026',
+        registrationStart: DateTime(2026, 8, 20),
+        registrationEnd: DateTime(2026, 9, 3),
+        classStart: DateTime(2026, 9, 6),
+        midtermStart: DateTime(2026, 10, 17),
+        midtermEnd: DateTime(2026, 10, 27),
+        finalStart: DateTime(2026, 12, 12),
+        finalEnd: DateTime(2026, 12, 24),
+        resultPublication: DateTime(2027, 1, 15),
+        status: 'Upcoming',
+      ),
+    ];
+  }
+
+  static List<DemoCalendarEvent> _calendarEvents() {
+    return [
+      DemoCalendarEvent(
+        id: 'cal-001',
+        semesterId: 'sem-spring-2026',
+        title: 'Spring 2026 registration',
+        type: 'Registration',
+        startDate: DateTime(2026, 1, 5),
+        endDate: DateTime(2026, 1, 16),
+        audience: 'Students',
+        status: 'Completed',
+      ),
+      DemoCalendarEvent(
+        id: 'cal-002',
+        semesterId: 'sem-spring-2026',
+        title: 'Regular classes begin',
+        type: 'Class',
+        startDate: DateTime(2026, 1, 18),
+        endDate: DateTime(2026, 1, 18),
+        audience: 'All',
+        status: 'Completed',
+      ),
+      DemoCalendarEvent(
+        id: 'cal-003',
+        semesterId: 'sem-spring-2026',
+        title: 'Midterm examination period',
+        type: 'Exam',
+        startDate: DateTime(2026, 3, 10),
+        endDate: DateTime(2026, 3, 21),
+        audience: 'Students',
+        status: 'Completed',
+      ),
+      DemoCalendarEvent(
+        id: 'cal-004',
+        semesterId: 'sem-spring-2026',
+        title: 'Final exam form fill-up and clearance',
+        type: 'Finance',
+        startDate: DateTime(2026, 7, 20),
+        endDate: DateTime(2026, 7, 28),
+        audience: 'Students',
+        status: 'Active',
+      ),
+      DemoCalendarEvent(
+        id: 'cal-005',
+        semesterId: 'sem-spring-2026',
+        title: 'Final examination period',
+        type: 'Exam',
+        startDate: DateTime(2026, 7, 29),
+        endDate: DateTime(2026, 8, 12),
+        audience: 'All',
+        status: 'Upcoming',
+      ),
+      DemoCalendarEvent(
+        id: 'cal-006',
+        semesterId: 'sem-spring-2026',
+        title: 'Result publication target',
+        type: 'Result',
+        startDate: DateTime(2026, 8, 30),
+        endDate: DateTime(2026, 8, 30),
+        audience: 'Students',
+        status: 'Scheduled',
       ),
     ];
   }
@@ -398,17 +788,7 @@ class DemoSeed {
         departmentId: 'dept-eee',
         designation: 'Lecturer',
       ),
-      DemoAccount(
-        id: 'u-fac-001',
-        universityId: 'F1001',
-        email: 'faculty@eub.edu.bd',
-        password: '123456',
-        fullName: 'Md. Rakib Hasan',
-        role: PortalRole.faculty,
-        departmentId: 'dept-cse',
-        designation: 'Faculty Coordinator',
-        phone: '+8801711301001',
-      ),
+      ..._administrationStaff(),
       DemoAccount(
         id: 'u-adm-001',
         universityId: 'ADMIN001',
@@ -421,6 +801,147 @@ class DemoSeed {
         phone: '+8801711401001',
       ),
     ];
+  }
+
+  static List<DemoAccount> _administrationStaff() {
+    final rows = [
+      (
+        'u-admstaff-001',
+        'EUB-REG-1001',
+        'administration@eub.edu.bd',
+        'Md. Rakib Hasan',
+        'office-registrar',
+        'Assistant Registrar',
+        'dept-cse',
+        ['Registration verification', 'Student records', 'Certificate desk'],
+      ),
+      (
+        'u-admstaff-002',
+        'EUB-ACC-1002',
+        'accounts.office@eub.edu.bd',
+        'Farzana Rahman',
+        'office-accounts',
+        'Accounts Officer',
+        'dept-bba',
+        ['Ledger review', 'Payment verification', 'Waiver cases'],
+      ),
+      (
+        'u-admstaff-003',
+        'EUB-EXM-1003',
+        'exam.office@eub.edu.bd',
+        'Hafizur Rahman',
+        'office-exams',
+        'Examination Officer',
+        'dept-cse',
+        ['Exam schedule', 'Result review', 'Transcript requests'],
+      ),
+      (
+        'u-admstaff-004',
+        'EUB-ASA-1004',
+        'admission.office@eub.edu.bd',
+        'Nusrat Akter',
+        'office-admission',
+        'Admission Officer',
+        'dept-bba',
+        ['Application review', 'Student affairs', 'Event coordination'],
+      ),
+      (
+        'u-admstaff-005',
+        'EUB-PND-1005',
+        'planning.office@eub.edu.bd',
+        'Sabbir Ahmed',
+        'office-planning',
+        'Planning Officer',
+        'dept-ce',
+        ['Development task follow-up', 'Policy tracking', 'Reporting'],
+      ),
+      (
+        'u-admstaff-006',
+        'EUB-PCD-1006',
+        'program.office@eub.edu.bd',
+        'Mahbub Karim',
+        'office-program',
+        'Program Coordination Officer',
+        'dept-cse',
+        ['Program records', 'Section coordination', 'Course catalog review'],
+      ),
+      (
+        'u-admstaff-007',
+        'EUB-LIB-1007',
+        'library.office@eub.edu.bd',
+        'Samia Sultana',
+        'office-library',
+        'Library Officer',
+        'dept-eng',
+        ['Module archive', 'Library clearance', 'Resource requests'],
+      ),
+      (
+        'u-admstaff-008',
+        'EUB-INV-1008',
+        'inventory.office@eub.edu.bd',
+        'Tanvir Mahmud',
+        'office-procurement',
+        'Procurement Officer',
+        'dept-eee',
+        ['Inventory review', 'Equipment issue tracking', 'Purchase files'],
+      ),
+      (
+        'u-admstaff-009',
+        'EUB-IQAC-1009',
+        'iqac.office@eub.edu.bd',
+        'Dr. Maliha Karim',
+        'office-iqac',
+        'Quality Assurance Officer',
+        'dept-cse',
+        ['Course evaluation', 'Quality reports', 'Department performance'],
+      ),
+      (
+        'u-admstaff-010',
+        'EUB-ICT-1010',
+        'ict.office@eub.edu.bd',
+        'Raihan Islam',
+        'office-ict',
+        'ICT Support Officer',
+        'dept-cse',
+        ['Portal tickets', 'Laboratory status', 'Equipment support'],
+      ),
+      (
+        'u-admstaff-011',
+        'EUB-PRO-1011',
+        'proctor.office@eub.edu.bd',
+        'Adv. Sadia Hoque',
+        'office-proctor',
+        'Assistant Proctor',
+        'dept-law',
+        ['Complaints', 'Discipline cases', 'Incident follow-up'],
+      ),
+      (
+        'u-admstaff-012',
+        'EUB-CCC-1012',
+        'ccc.office@eub.edu.bd',
+        'Arman Hossain',
+        'office-ccc',
+        'Career Services Officer',
+        'dept-bba',
+        ['Career events', 'Club coordination', 'Employer communication'],
+      ),
+    ];
+
+    return rows.map((row) {
+      return DemoAccount(
+        id: row.$1,
+        universityId: row.$2,
+        email: row.$3,
+        password: '123456',
+        fullName: row.$4,
+        role: PortalRole.administration,
+        departmentId: row.$7,
+        officeId: row.$5,
+        designation: row.$6,
+        phone: '+88017113${row.$2.substring(row.$2.length - 4)}',
+        responsibilities: row.$8,
+      );
+    }).toList();
   }
 
   static List<DemoCourse> _courses() {
@@ -1688,6 +2209,224 @@ class DemoSeed {
     ];
   }
 
+  static List<DemoExamSchedule> _examSchedules(List<DemoSection> sections) {
+    final examTypes = ['Midterm', 'Final', 'Supplementary'];
+    return sections.asMap().entries.map((entry) {
+      final index = entry.key;
+      final section = entry.value;
+      final type = examTypes[index % examTypes.length];
+      final isFinal = type == 'Final';
+      final isSupplementary = type == 'Supplementary';
+      return DemoExamSchedule(
+        id: 'exam-${(index + 1).toString().padLeft(3, '0')}',
+        courseId: section.courseId,
+        sectionId: section.id,
+        examType: type,
+        room: 'Room ${501 + index % 9}',
+        date: DateTime(
+          2026,
+          isFinal ? 8 : 7,
+          isFinal ? 1 + index % 10 : 25 + index % 5,
+        ),
+        start: index.isEven ? '10:00 AM' : '02:00 PM',
+        end: index.isEven ? '12:00 PM' : '04:00 PM',
+        invigilatorId: 'u-tea-${((index % 10) + 1).toString().padLeft(3, '0')}',
+        admitCardStatus: index % 4 == 0 ? 'Pending Clearance' : 'Ready',
+        resultSubmissionStatus: isSupplementary
+            ? 'Awaiting Submission'
+            : index % 3 == 0
+            ? 'Submitted'
+            : 'Awaiting Submission',
+        resultApprovalStatus: index % 5 == 0 ? 'Approved' : 'Awaiting Review',
+        resultPublicationStatus: index % 6 == 0 ? 'Published' : 'Not Published',
+        supplementaryCases: isSupplementary ? 2 + index % 5 : index % 3,
+      );
+    }).toList();
+  }
+
+  static List<DemoStudentRequest> _studentRequests() {
+    final requestTypes = [
+      ('Transcript', 'office-exams'),
+      ('Provisional Certificate', 'office-registrar'),
+      ('Academic Certificate', 'office-registrar'),
+      ('Recommendation/Verification', 'office-registrar'),
+      ('Student ID replacement', 'office-admission'),
+      ('Registration correction', 'office-registrar'),
+      ('Course registration issue', 'office-program'),
+      ('Payment correction', 'office-accounts'),
+      ('Result correction', 'office-exams'),
+      ('Supplementary exam request', 'office-exams'),
+    ];
+    final statuses = [
+      'Submitted',
+      'Under Review',
+      'Additional Information Required',
+      'Approved',
+      'Processing',
+      'Ready',
+      'Completed',
+      'Rejected',
+    ];
+    return List.generate(36, (offset) {
+      final type = requestTypes[offset % requestTypes.length];
+      final studentNo = offset % 40 + 1;
+      final status = statuses[offset % statuses.length];
+      return DemoStudentRequest(
+        id: 'req-${(offset + 1).toString().padLeft(3, '0')}',
+        studentId: 'u-stu-${studentNo.toString().padLeft(3, '0')}',
+        type: type.$1,
+        submittedAt: DateTime(2026, 7, 2 + offset % 23, 10 + offset % 7),
+        assignedOfficeId: type.$2,
+        priority: offset % 7 == 0
+            ? 'Urgent'
+            : offset % 3 == 0
+            ? 'High'
+            : 'Normal',
+        status: status,
+        notes:
+            '$status request routed to ${type.$2.replaceAll('office-', '').toUpperCase()} workflow.',
+        timeline: [
+          'Submitted by student on July ${(2 + offset % 23).toString().padLeft(2, '0')}, 2026',
+          if (status != 'Submitted') 'Assigned office reviewed the request',
+          if (status == 'Ready' || status == 'Completed')
+            'Document prepared for collection',
+        ],
+        updatedAt: DateTime(2026, 7, 3 + offset % 22, 14),
+      );
+    });
+  }
+
+  static List<DemoAdmissionApplication> _admissions() {
+    final programIds = [
+      'program-cse-bsc',
+      'program-eee-bsc',
+      'program-ce-bsc',
+      'program-bba',
+      'program-eng-ba',
+      'program-law-llb',
+      'program-eco-bss',
+    ];
+    final firstNames = [
+      'Mahir',
+      'Sadia',
+      'Nafisa',
+      'Riyad',
+      'Tamanna',
+      'Shafin',
+      'Jarin',
+      'Hasib',
+    ];
+    final stages = [
+      'New',
+      'Documents Pending',
+      'Under Review',
+      'Eligible',
+      'Approved',
+      'Rejected',
+      'Payment Pending',
+      'Registered',
+    ];
+    return List.generate(48, (offset) {
+      final stage = stages[offset % stages.length];
+      return DemoAdmissionApplication(
+        id: 'app-${(offset + 1).toString().padLeft(4, '0')}',
+        applicantName:
+            '${firstNames[offset % firstNames.length]} ${offset.isEven ? 'Rahman' : 'Islam'}',
+        programId: programIds[offset % programIds.length],
+        contact: '+88019${(41000000 + offset * 3711).toString().substring(1)}',
+        previousEducation: offset % 5 == 0
+            ? 'Diploma in Engineering'
+            : 'HSC, Science group',
+        applicationDate: DateTime(2026, 7, 1 + offset % 24),
+        documents: {
+          'Photo': true,
+          'Transcript': offset % 4 != 0,
+          'Certificate': offset % 5 != 0,
+          'NID/Birth certificate': offset % 6 != 0,
+        },
+        stage: stage,
+        paymentStatus: stage == 'Registered'
+            ? 'Paid'
+            : offset % 3 == 0
+            ? 'Pending'
+            : 'Unpaid',
+      );
+    });
+  }
+
+  static List<DemoLostFoundItem> _lostFoundItems() {
+    final rows = [
+      (
+        'Lost',
+        'Black Casio scientific calculator',
+        'Name sticker on the back, last used after EEE lab.',
+        'EEE Laboratory',
+        'u-stu-010',
+        'Open',
+      ),
+      (
+        'Found',
+        'Student ID card found near CSE Lab 2',
+        'ID card belongs to a Spring 2026 CSE student.',
+        'CSE Lab 2',
+        'u-admstaff-010',
+        'Matched',
+      ),
+      (
+        'Found',
+        'Blue notebook with DBMS notes',
+        'Contains normalization notes and an assignment checklist.',
+        'Library second floor',
+        'u-stu-004',
+        'Open',
+      ),
+      (
+        'Lost',
+        'USB flash drive',
+        'Silver 32GB flash drive with cap missing.',
+        'Room 604',
+        'u-tea-001',
+        'Open',
+      ),
+      (
+        'Found',
+        'Wallet with transport card',
+        'No cash reported, owner can identify card details.',
+        'Admission office lobby',
+        'u-admstaff-004',
+        'Returned',
+      ),
+      (
+        'Lost',
+        'Civil drawing scale set',
+        'Transparent scale set in a blue pouch.',
+        'Civil drawing room',
+        'u-stu-018',
+        'Closed',
+      ),
+    ];
+
+    return rows.asMap().entries.map((entry) {
+      final index = entry.key;
+      final row = entry.value;
+      return DemoLostFoundItem(
+        id: 'lf-${(index + 1).toString().padLeft(3, '0')}',
+        type: row.$1,
+        title: row.$2,
+        description: row.$3,
+        location: row.$4,
+        reporterId: row.$5,
+        status: row.$6,
+        reportedAt: DateTime(2026, 7, 20 + index),
+        contact: 'Student Service Desk',
+        matchedItemId: row.$6 == 'Matched' ? 'lf-001' : null,
+        claimNote: row.$6 == 'Returned'
+            ? 'Owner verified identity and collected from Student Affairs.'
+            : null,
+      );
+    }).toList();
+  }
+
   static List<DemoNotice> _notices() {
     final titles = [
       'Spring 2026 midterm routine published',
@@ -1720,11 +2459,25 @@ class DemoSeed {
         authorId: entry.key % 4 == 0
             ? 'u-adm-001'
             : entry.key % 3 == 0
-            ? 'u-fac-001'
+            ? 'u-admstaff-001'
             : 'u-tea-001',
         target: entry.key % 5 == 0 ? 'all' : 'students',
         publishedAt: DateTime(2026, 7, 2 + entry.key, 10, 30),
         sectionId: entry.key == 6 || entry.key == 7 ? 'sec-cse315-6a' : null,
+        category: entry.key % 4 == 0
+            ? 'Academic'
+            : entry.key % 4 == 1
+            ? 'Payment'
+            : entry.key % 4 == 2
+            ? 'Event'
+            : 'Administration',
+        audience: entry.key % 5 == 0 ? 'All' : 'Students',
+        expiryDate: DateTime(2026, 8, 10 + entry.key % 12),
+        priority: entry.key % 6 == 0 ? 'High' : 'Normal',
+        attachmentName: entry.key % 3 == 0
+            ? 'notice-${entry.key + 1}.pdf'
+            : null,
+        status: 'Published',
       );
     }).toList();
   }
@@ -1782,7 +2535,7 @@ class DemoSeed {
         'Guidance on literature review, citations, and research ethics.',
         '2026-08-18',
         'Seminar Room 401',
-        'Faculty Office',
+        'IQAC and Program Coordination',
         100,
       ],
       [
@@ -1832,6 +2585,8 @@ class DemoSeed {
         organizer: row[5] as String,
         capacity: row[6] as int,
         status: 'published',
+        time: (rows.indexOf(row).isEven ? '10:30 AM' : '03:00 PM'),
+        audience: rows.indexOf(row) % 3 == 0 ? 'All' : 'Students',
       );
     }).toList();
   }
@@ -2193,6 +2948,11 @@ class DemoSeed {
         priority: 'High',
         status: 'open',
         createdAt: DateTime(2026, 7, 23, 13, 10),
+        description:
+            'Receipt tile is missing after a partial payment against Spring 2026 invoice.',
+        assignedOfficeId: 'office-accounts',
+        userRole: 'Student',
+        lastUpdated: DateTime(2026, 7, 23, 16, 40),
       ),
       DemoSupportTicket(
         id: 'ticket-002',
@@ -2202,6 +2962,11 @@ class DemoSeed {
         priority: 'Medium',
         status: 'pending',
         createdAt: DateTime(2026, 7, 22, 15, 45),
+        description:
+            'Student wants to add a section after checking routine conflicts.',
+        assignedOfficeId: 'office-program',
+        userRole: 'Student',
+        lastUpdated: DateTime(2026, 7, 22, 16, 5),
       ),
       DemoSupportTicket(
         id: 'ticket-003',
@@ -2211,6 +2976,11 @@ class DemoSeed {
         priority: 'Low',
         status: 'closed',
         createdAt: DateTime(2026, 7, 20, 11, 15),
+        description: 'Replacement ID card request with lost-card note.',
+        assignedOfficeId: 'office-admission',
+        userRole: 'Student',
+        lastUpdated: DateTime(2026, 7, 21, 9, 45),
+        resolution: 'Replacement request approved for collection.',
       ),
       DemoSupportTicket(
         id: 'ticket-004',
@@ -2220,6 +2990,11 @@ class DemoSeed {
         priority: 'Medium',
         status: 'open',
         createdAt: DateTime(2026, 7, 24, 10, 5),
+        description:
+            'Student asks whether portal result sheet can support a scholarship application.',
+        assignedOfficeId: 'office-registrar',
+        userRole: 'Student',
+        lastUpdated: DateTime(2026, 7, 24, 10, 8),
       ),
       DemoSupportTicket(
         id: 'ticket-005',
@@ -2229,6 +3004,10 @@ class DemoSeed {
         priority: 'Medium',
         status: 'pending',
         createdAt: DateTime(2026, 7, 24, 12, 30),
+        description: 'Campus Wi-Fi drops near library second floor.',
+        assignedOfficeId: 'office-ict',
+        userRole: 'Student',
+        lastUpdated: DateTime(2026, 7, 24, 12, 34),
       ),
       DemoSupportTicket(
         id: 'ticket-006',
@@ -2238,6 +3017,10 @@ class DemoSeed {
         priority: 'Low',
         status: 'open',
         createdAt: DateTime(2026, 7, 21, 9, 20),
+        description: 'Pickup location needs update for Mirpur route.',
+        assignedOfficeId: 'office-admission',
+        userRole: 'Student',
+        lastUpdated: DateTime(2026, 7, 21, 9, 20),
       ),
     ];
   }
@@ -2255,7 +3038,7 @@ class DemoSeed {
       DemoSupportMessage(
         id: 'msg-002',
         ticketId: 'ticket-001',
-        authorId: 'u-fac-001',
+        authorId: 'u-admstaff-001',
         message:
             'Finance office is reviewing the ledger. Please keep the transaction slip until the receipt is updated.',
         createdAt: DateTime(2026, 7, 23, 16, 40),
@@ -2288,132 +3071,92 @@ class DemoSeed {
   }
 
   static List<DemoInvoice> _invoices() {
-    return [
-      DemoInvoice(
-        id: 'inv-001',
-        studentId: 'u-stu-001',
-        semester: 'Spring 2026',
+    return List.generate(180, (offset) {
+      final studentNo = offset + 1;
+      final studentId = 'u-stu-${studentNo.toString().padLeft(3, '0')}';
+      final creditFee = 39000 + (offset % 8) * 2500;
+      final labFee = offset % 3 == 0
+          ? 3500
+          : offset % 3 == 1
+          ? 2500
+          : 0;
+      final examFee = 2200 + (offset % 4) * 300;
+      final previousDue = offset % 11 == 0 ? 3500 : 0;
+      final waiver = offset % 9 == 0
+          ? 9000
+          : offset % 5 == 0
+          ? 5500
+          : 0;
+      final subtotal = 8000 + creditFee + labFee + examFee + 1500 + previousDue;
+      final total = subtotal - waiver;
+      final paid = offset % 13 == 0
+          ? total
+          : offset % 4 == 0
+          ? (total * 0.72).round()
+          : offset % 3 == 0
+          ? (total * 0.55).round()
+          : (total * 0.38).round();
+      return DemoInvoice(
+        id: 'inv-${studentNo.toString().padLeft(3, '0')}',
+        studentId: studentId,
+        semester: offset % 3 == 0
+            ? 'Spring 2026'
+            : offset % 3 == 1
+            ? 'Summer 2026'
+            : 'Fall 2025',
         items: {
-          'Semester fee': 8000,
-          'Credit fee': 45000,
-          'Lab fee': 3500,
-          'Library fee': 1500,
-          'Previous due': 3000,
+          'Registration fee': 8000,
+          'Tuition / credit fee': creditFee,
+          'Lab fee': labFee,
+          'Exam fee': examFee,
+          'Library and other fees': 1500,
+          if (previousDue > 0) 'Previous due': previousDue,
         },
-        waiver: 7000,
-        paid: 28000,
-        dueDate: DateTime(2026, 8, 10),
-      ),
-      DemoInvoice(
-        id: 'inv-002',
-        studentId: 'u-stu-002',
-        semester: 'Spring 2026',
-        items: {'Semester fee': 8000, 'Credit fee': 45000, 'Lab fee': 3000},
-        waiver: 5000,
-        paid: 32000,
-        dueDate: DateTime(2026, 8, 10),
-      ),
-      DemoInvoice(
-        id: 'inv-003',
-        studentId: 'u-stu-004',
-        semester: 'Spring 2026',
-        items: {'Semester fee': 8000, 'Credit fee': 45000, 'Library fee': 1500},
-        waiver: 8000,
-        paid: 46500,
-        dueDate: DateTime(2026, 8, 10),
-      ),
-      ...List.generate(77, (offset) {
-        final studentNo = offset + 5;
-        final studentId = 'u-stu-${studentNo.toString().padLeft(3, '0')}';
-        final subtotal = 48500 + (offset % 6) * 2500;
-        final labFee = offset % 2 == 0 ? 3500 : 2500;
-        final totalBeforeWaiver = 8000 + (subtotal - 13000) + labFee + 1500;
-        final waiver = offset % 4 == 0
-            ? 6000
-            : offset % 7 == 0
-            ? 3500
-            : 0;
-        final paid = offset % 5 == 0
-            ? totalBeforeWaiver - waiver
-            : offset % 3 == 0
-            ? 25000
-            : 15000 + (offset % 4) * 5000;
-        return DemoInvoice(
-          id: 'inv-${(offset + 4).toString().padLeft(3, '0')}',
-          studentId: studentId,
-          semester: offset.isEven ? 'Spring 2026' : 'Summer 2026',
-          items: {
-            'Semester fee': 8000,
-            'Credit fee': subtotal - 13000,
-            'Lab fee': labFee,
-            'Library fee': 1500,
-          },
-          waiver: waiver,
-          paid: paid,
-          dueDate: DateTime(2026, 8, 10 + offset % 12),
-        );
-      }),
-    ];
+        waiver: waiver,
+        paid: paid,
+        dueDate: DateTime(2026, offset % 3 == 2 ? 7 : 8, 5 + offset % 20),
+      );
+    });
   }
 
-  static List<DemoPayment> _payments() {
-    return [
-      DemoPayment(
-        id: 'pay-001',
-        invoiceId: 'inv-001',
-        studentId: 'u-stu-001',
-        amount: 18000,
-        method: 'Bank deposit',
-        paidAt: DateTime(2026, 7, 5),
-        receiptNo: 'EUB-RCPT-260705-001',
-      ),
-      DemoPayment(
-        id: 'pay-002',
-        invoiceId: 'inv-001',
-        studentId: 'u-stu-001',
-        amount: 10000,
-        method: 'bKash counter',
-        paidAt: DateTime(2026, 7, 19),
-        receiptNo: 'EUB-RCPT-260719-014',
-      ),
-      DemoPayment(
-        id: 'pay-003',
-        invoiceId: 'inv-002',
-        studentId: 'u-stu-002',
-        amount: 32000,
-        method: 'Bank deposit',
-        paidAt: DateTime(2026, 7, 17),
-        receiptNo: 'EUB-RCPT-260717-006',
-      ),
-      DemoPayment(
-        id: 'pay-004',
-        invoiceId: 'inv-003',
-        studentId: 'u-stu-004',
-        amount: 46500,
-        method: 'Card counter',
-        paidAt: DateTime(2026, 7, 15),
-        receiptNo: 'EUB-RCPT-260715-003',
-      ),
-      ...List.generate(95, (offset) {
-        final studentNo = offset % 77 + 5;
-        final invoiceNo = offset % 77 + 4;
-        final amount = offset % 4 == 0
-            ? 12000
-            : offset % 4 == 1
-            ? 18000
-            : 24000;
-        return DemoPayment(
-          id: 'pay-${(offset + 5).toString().padLeft(3, '0')}',
-          invoiceId: 'inv-${invoiceNo.toString().padLeft(3, '0')}',
-          studentId: 'u-stu-${studentNo.toString().padLeft(3, '0')}',
-          amount: amount,
-          method: offset.isEven ? 'Bank deposit' : 'Card counter',
-          paidAt: DateTime(2026, 7, 1 + offset % 24),
-          receiptNo:
-              'EUB-RCPT-2607${(1 + offset % 24).toString().padLeft(2, '0')}-${(offset + 5).toString().padLeft(3, '0')}',
+  static List<DemoPayment> _payments(List<DemoInvoice> invoices) {
+    final payments = <DemoPayment>[];
+    var counter = 1;
+    for (final invoice in invoices) {
+      if (invoice.paid <= 0) {
+        continue;
+      }
+      final firstAmount = invoice.paid > 30000
+          ? (invoice.paid * 0.6).round()
+          : invoice.paid;
+      final secondAmount = invoice.paid - firstAmount;
+      final rows = secondAmount > 0
+          ? [firstAmount, secondAmount]
+          : [firstAmount];
+      for (final amount in rows) {
+        final day = counter == 1 ? 26 : 1 + counter % 25;
+        payments.add(
+          DemoPayment(
+            id: 'pay-${counter.toString().padLeft(3, '0')}',
+            invoiceId: invoice.id,
+            studentId: invoice.studentId,
+            amount: amount,
+            method: counter % 3 == 0
+                ? 'Card counter'
+                : counter % 3 == 1
+                ? 'Bank deposit'
+                : 'Mobile banking counter',
+            paidAt: DateTime(2026, 7, day),
+            receiptNo:
+                'EUB-RCPT-2607${day.toString().padLeft(2, '0')}-${counter.toString().padLeft(3, '0')}',
+            status: counter % 17 == 0 ? 'Pending Verification' : 'Verified',
+            reference: 'INV-${invoice.id.toUpperCase()}',
+          ),
         );
-      }),
-    ];
+        counter++;
+      }
+    }
+    return payments;
   }
 
   static List<DemoResult> _results() {
@@ -2637,8 +3380,8 @@ class DemoSeed {
       DemoApproval(
         id: 'apv-004',
         type: 'Role request',
-        title: 'Assign forum moderator access to faculty coordinator',
-        requesterId: 'u-fac-001',
+        title: 'Assign forum moderator access to Administration officer',
+        requesterId: 'u-admstaff-001',
         status: 'pending',
         createdAt: DateTime(2026, 7, 24),
       ),
@@ -2687,9 +3430,9 @@ class DemoSeed {
         'Dr. Farhan graded Nayem Ahmed with feedback.',
       ],
       [
-        'u-fac-001',
-        'Faculty updated routine',
-        'Faculty coordinator revised CSE 6A lab timing.',
+        'u-admstaff-001',
+        'Administration updated routine',
+        'Administration officer revised CSE 6A lab timing.',
       ],
       [
         'u-adm-001',
@@ -2707,9 +3450,9 @@ class DemoSeed {
         'Nayem reported an SQL answer discussion for moderation.',
       ],
       [
-        'u-fac-001',
+        'u-admstaff-001',
         'Support reply sent',
-        'Faculty replied to a payment receipt support ticket.',
+        'Administration replied to a payment receipt support ticket.',
       ],
       [
         'u-tea-005',
