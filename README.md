@@ -1,66 +1,66 @@
 # EUB Connect
 
-EUB Connect is a Flutter/GetX university management demo for students, teachers, faculty staff, and administrators. The active app now runs in local demo mode first: login, dashboards, assignments, quizzes, attendance, payments, events, support, forum data, approvals, notifications, and settings are powered by a shared local dataset.
+EUB Connect is a Flutter/GetX local demo portal inspired by European University of Bangladesh workflows. It is not an official production EUB system. The current build runs from local `DemoStore` / `DemoSeed` / GetStorage data and does not require Firebase, Supabase, a REST backend, remote authentication, or cloud storage.
 
-## Stack
+## Current Demo Status
 
-- Flutter and Dart
-- GetX for routing/state
-- GetStorage for local demo persistence
-- Material 3
-- Supabase files are kept as future backend scaffolding, but are not required to run the demo
+- Serious university portal demo for Student, Teacher, Administration, and Admin roles
+- Local persistence through GetStorage with reset support
+- Data-driven dashboards, management records, search/filter/sort lists, detail dialogs, and cross-role demo actions
+- Supabase files remain as future backend scaffolding only
 
-## Demo Accounts
+## Roles
 
-All demo accounts use password `123456`. Login accepts either ID or email.
+| Role | Purpose |
+| --- | --- |
+| Student | Personal courses, attendance, assignments, quiz, results, finance, requests, support, events, clubs, community, lost/found, profile |
+| Teacher | Assigned sections, attendance, assignments, quizzes, submissions, grading, materials, notices, results, support |
+| Administration | Office staff workflows for registrar, accounts, examinations, admission/student affairs, IQAC, ICT, proctor, CCC, and other operational units |
+| Admin | University-wide command center, system oversight, people/academic/finance/operations/support/moderation/settings |
+
+## Demo Credentials
+
+All demo accounts use password `123456`.
 
 | Role | ID | Email | Name |
 | --- | --- | --- | --- |
 | Student | `2023001001` | `student@eub.edu.bd` | Nayem Ahmed |
 | Teacher | `T1001` | `teacher@eub.edu.bd` | Dr. Farhan Rahman |
-| Faculty | `F1001` | `faculty@eub.edu.bd` | Md. Rakib Hasan |
+| Administration | `EUB-REG-1001` | `administration@eub.edu.bd` | Md. Rakib Hasan |
 | Admin | `ADMIN001` | `admin@eub.edu.bd` | System Administrator |
 
-The login screen includes a demo account picker that fills the selected ID and password.
-
-## Demo Data
-
-The local dataset lives under:
+## Architecture
 
 ```text
-lib/core/demo/
+lib/core/demo/demo_models.dart   # local demo models
+lib/core/demo/demo_seed.dart     # deterministic interconnected seed data
+lib/core/demo/demo_store.dart    # local repository, calculations, mutations
+lib/feature/home/                # role dashboards, navigation, generic management/detail UI
 ```
 
-It includes:
+## Feature Matrix
 
-- 180 students, 10 teachers, faculty/admin users
-- 5 departments and 15 courses
-- sections, enrollments, weekly routines, rooms, and attendance history
-- 15 assignments, student submissions, teacher grading, 10 quizzes, quiz attempts
-- 20 notices, 10 events, clubs, scholarships, 80 invoices, 99 payments, 427 result rows
-- 24 forum posts, 72 comments/replies, moderation reports
-- support tickets, notifications, approvals, and 40 activity entries
+- Academic: departments, programs, courses, sections, calendar, routine, attendance, assignments, quizzes, results, examinations
+- People: students, teachers, administration staff, user roles
+- Operations: admissions, student requests/documents, support tickets, complaints/cases
+- Finance: student ledgers, invoices, payments, scholarships/waivers
+- Engagement: notices, events, clubs, discussion board, community moderation, lost & found
+- System: notifications, activity log, settings, demo data reset
 
-Important counters are calculated from these collections. For example, forum post/comment counts come from the forum lists, attendance percentages come from attendance rows, and tuition due comes from invoice/payment records.
+## Local Demo Data
 
-## Local Workflows
+The seed contains students, teachers, administration staff, offices, departments, programs, courses, sections, enrollments, attendance, assignments, submissions, quizzes, exams, invoices, payments, admissions, requests, notices, events, clubs, forum reports, support tickets, lost/found cases, notifications, approvals, and audit activity. Dashboard numbers are calculated from these records.
 
-Local demo state persists with GetStorage and survives app restart where practical.
+## Cross-Role Workflows
 
-Implemented cross-role examples:
-
-- Teacher publishes/grades assignment -> student sees assignment/grade/notification
-- Student submits assignment -> teacher sees submission
-- Student submits quiz -> teacher sees attempt
-- Teacher marks attendance -> student attendance screen updates
-- Student pays invoice through a local payment simulation -> invoice due and payment history update
-- Student creates forum report -> admin/faculty moderation sees it
-- Student creates forum posts through a validated form
-- Student creates support ticket through category/priority/description form -> faculty/admin can reply
-- Teacher publishes quizzes with entered questions/options/correct answers
-- Event registration, club join, approvals, notices, notifications, and reset actions update local state
-
-Settings includes `Reset Demo Data`, which restores the original seed.
+- Teacher publishes or grades assignments -> students receive updates
+- Student submits assignments/quizzes -> teacher views submissions/attempts
+- Student pays locally -> invoice due, payments, finance totals, and notifications update
+- Student creates requests/support tickets -> Administration/Admin queues update
+- Administration processes requests/tickets/results -> student status and notifications update
+- Admin/Administration creates notices/events -> targeted users see records/notifications
+- Student reports forum content -> Admin moderation count updates
+- Admin resolves reports or lost/found cases -> local records update immediately
 
 ## Run
 
@@ -68,20 +68,6 @@ Settings includes `Reset Demo Data`, which restores the original seed.
 flutter pub get
 flutter run
 ```
-
-No Supabase credentials are required for the current demo version.
-
-## Future Backend
-
-The previous Supabase foundation remains in:
-
-```text
-lib/core/backend/
-lib/core/config/
-supabase/
-```
-
-Those files are not active in app startup now. They can be used later to replace demo repositories with API/Supabase repositories without rebuilding screens from scratch.
 
 ## Quality Checks
 
@@ -91,4 +77,6 @@ flutter analyze
 flutter test
 ```
 
-Current tests cover GPA, attendance percentage, tuition due, quiz scoring, and schedule conflict calculations.
+## Backend Future Plan
+
+The app is intentionally frontend/local-demo first. A future backend can replace `DemoStore` with Supabase/API repositories while preserving the role model, UI modules, and workflow contracts.

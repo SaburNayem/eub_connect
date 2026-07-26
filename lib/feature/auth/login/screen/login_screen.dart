@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
           onSubmit: _controller.isSubmitting.value ? () {} : _login,
           children: [
             AuthTextField(
-              label: 'Student/Teacher ID or Email',
+              label: 'University ID or Email',
               icon: Icons.badge_outlined,
               controller: _controller.emailController,
               keyboardType: TextInputType.emailAddress,

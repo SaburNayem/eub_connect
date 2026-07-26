@@ -13,7 +13,7 @@ class DemoStore extends GetxController {
   DemoStore._(this._storage);
 
   static const _boxName = 'eub_connect_demo';
-  static const _stateKey = 'presentation_state_v3';
+  static const _stateKey = 'presentation_state_v4';
   static DemoStore? _instance;
 
   final GetStorage _storage;
@@ -21,9 +21,13 @@ class DemoStore extends GetxController {
 
   String? currentAccountId;
   List<DemoAccount> accounts = [];
+  List<DemoOffice> offices = [];
   List<DemoDepartment> departments = [];
+  List<DemoProgram> programs = [];
   List<DemoCourse> courses = [];
   List<DemoSection> sections = [];
+  List<DemoAcademicSemester> academicSemesters = [];
+  List<DemoCalendarEvent> calendarEvents = [];
   List<DemoEnrollment> enrollments = [];
   List<DemoScheduleEntry> schedules = [];
   List<DemoAttendanceRecord> attendance = [];
@@ -31,11 +35,15 @@ class DemoStore extends GetxController {
   List<DemoSubmission> submissions = [];
   List<DemoQuiz> quizzes = [];
   List<DemoQuizAttempt> quizAttempts = [];
+  List<DemoExamSchedule> examSchedules = [];
+  List<DemoStudentRequest> studentRequests = [];
+  List<DemoAdmissionApplication> admissions = [];
   List<DemoNotice> notices = [];
   List<DemoEvent> events = [];
   List<DemoEventRegistration> eventRegistrations = [];
   List<DemoClub> clubs = [];
   List<DemoClubMembership> clubMemberships = [];
+  List<DemoLostFoundItem> lostFoundItems = [];
   List<DemoForumCategory> forumCategories = [];
   List<DemoForumPost> forumPosts = [];
   List<DemoForumComment> forumComments = [];
@@ -88,8 +96,14 @@ class DemoStore extends GetxController {
         .toList();
   }
 
+  List<DemoAccount> get administrationAccounts {
+    return accounts
+        .where((account) => account.role == PortalRole.administration)
+        .toList();
+  }
+
   List<DemoAccount> get demoLoginAccounts {
-    const ids = ['u-stu-001', 'u-tea-001', 'u-fac-001', 'u-adm-001'];
+    const ids = ['u-stu-001', 'u-tea-001', 'u-admstaff-001', 'u-adm-001'];
     return ids.map(accountById).whereType<DemoAccount>().toList();
   }
 
@@ -196,8 +210,26 @@ class DemoStore extends GetxController {
     return departments.firstWhereOrNull((department) => department.id == id);
   }
 
+  DemoOffice? officeById(String? id) {
+    return offices.firstWhereOrNull((office) => office.id == id);
+  }
+
+  DemoProgram? programById(String? id) {
+    return programs.firstWhereOrNull((program) => program.id == id);
+  }
+
   DemoCourse? courseById(String? id) {
     return courses.firstWhereOrNull((course) => course.id == id);
+  }
+
+  DemoProgram? programForCourse(DemoCourse? course) {
+    if (course == null) {
+      return null;
+    }
+    return programById(course.programId) ??
+        programs.firstWhereOrNull(
+          (program) => program.departmentId == course.departmentId,
+        );
   }
 
   DemoSection? sectionById(String? id) {
@@ -207,6 +239,17 @@ class DemoStore extends GetxController {
   String departmentName(String? departmentId) {
     return departmentById(departmentId)?.name ??
         'Eastern University Bangladesh';
+  }
+
+  String officeName(String? officeId) {
+    return officeById(officeId)?.name ?? 'University Administration';
+  }
+
+  String get currentSemesterName {
+    return academicSemesters
+            .firstWhereOrNull((semester) => semester.status == 'Current')
+            ?.name ??
+        'Spring 2026';
   }
 
   CourseSubject subjectForSection(String sectionId) {
@@ -241,11 +284,15 @@ class DemoStore extends GetxController {
         return sections
             .where((section) => section.teacherId == account?.id)
             .toList();
-      case PortalRole.faculty:
-        return sections.where((section) {
-          final course = courseById(section.courseId);
-          return course?.departmentId == account?.departmentId;
-        }).toList();
+      case PortalRole.administration:
+        final officeId = account?.officeId;
+        if (officeId == 'office-program' || officeId == 'office-iqac') {
+          return sections.where((section) {
+            final course = courseById(section.courseId);
+            return course?.departmentId == account?.departmentId;
+          }).toList();
+        }
+        return [...sections];
       case PortalRole.admin:
         return [...sections];
     }
@@ -889,6 +936,7 @@ class DemoStore extends GetxController {
     if (requester == null) {
       throw StateError('No account is signed in.');
     }
+    final officeId = _officeForSupportCategory(category);
     final ticket = DemoSupportTicket(
       id: _nextId('ticket'),
       requesterId: requester.id,
@@ -897,6 +945,10 @@ class DemoStore extends GetxController {
       priority: priority.trim(),
       status: 'open',
       createdAt: DateTime.now(),
+      description: description.trim(),
+      assignedOfficeId: officeId,
+      userRole: requester.role.label,
+      lastUpdated: DateTime.now(),
     );
     supportTickets.insert(0, ticket);
     supportMessages.add(
@@ -909,7 +961,7 @@ class DemoStore extends GetxController {
       ),
     );
     addNotification(
-      userId: 'u-fac-001',
+      userId: officeById(officeId)?.headId ?? 'u-admstaff-001',
       title: 'New support ticket',
       body: '${requester.fullName} created "${ticket.subject}".',
     );
@@ -919,6 +971,25 @@ class DemoStore extends GetxController {
       detail: '${requester.fullName} created a support ticket.',
     );
     _persist();
+  }
+
+  String _officeForSupportCategory(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('finance') || lower.contains('payment')) {
+      return 'office-accounts';
+    }
+    if (lower.contains('it') || lower.contains('technical')) {
+      return 'office-ict';
+    }
+    if (lower.contains('scholarship') || lower.contains('document')) {
+      return 'office-registrar';
+    }
+    if (lower.contains('affairs') ||
+        lower.contains('transport') ||
+        lower.contains('id')) {
+      return 'office-admission';
+    }
+    return 'office-program';
   }
 
   void replyFirstOpenSupportTicket({String? message}) {
@@ -934,7 +1005,7 @@ class DemoStore extends GetxController {
       DemoSupportMessage(
         id: _nextId('msg'),
         ticketId: ticket.id,
-        authorId: actor?.id ?? 'u-fac-001',
+        authorId: actor?.id ?? 'u-admstaff-001',
         message: message?.trim().isNotEmpty == true
             ? message!.trim()
             : 'Your request has been reviewed. Please check the updated portal record.',
@@ -947,9 +1018,10 @@ class DemoStore extends GetxController {
       body: 'A reply was added to "${ticket.subject}".',
     );
     addActivity(
-      actorId: actor?.id ?? 'u-fac-001',
+      actorId: actor?.id ?? 'u-admstaff-001',
       title: 'Support reply sent',
-      detail: '${actor?.fullName ?? 'Faculty'} replied to ${ticket.subject}.',
+      detail:
+          '${actor?.fullName ?? 'Administration'} replied to ${ticket.subject}.',
     );
     _persist();
   }
@@ -1078,6 +1150,468 @@ class DemoStore extends GetxController {
       detail: '${user.fullName} account status changed.',
     );
     _persist();
+  }
+
+  DemoAccount addStudentAccount({
+    required String fullName,
+    required String email,
+    required String phone,
+    String? departmentId,
+  }) {
+    final index = studentAccounts.length + 1;
+    final id = _nextId('u-stu');
+    final department = departmentId ?? 'dept-cse';
+    final account = DemoAccount(
+      id: id,
+      universityId: '2026${index.toString().padLeft(6, '0')}',
+      email: email.trim(),
+      password: '123456',
+      fullName: fullName.trim(),
+      role: PortalRole.student,
+      departmentId: department,
+      program: _shortProgramTitle(
+        programs
+                .firstWhereOrNull(
+                  (program) => program.departmentId == department,
+                )
+                ?.title ??
+            'B.Sc. in CSE',
+      ),
+      semester: currentSemesterName,
+      section: '1A',
+      batch: '26',
+      phone: phone.trim(),
+      completedCredits: 0,
+      currentCredits: 12,
+    );
+    accounts.add(account);
+    final invoice = DemoInvoice(
+      id: _nextId('inv'),
+      studentId: account.id,
+      semester: currentSemesterName,
+      items: const {
+        'Registration fee': 8000,
+        'Tuition / credit fee': 39000,
+        'Exam fee': 2200,
+        'Library and other fees': 1500,
+      },
+      waiver: 0,
+      paid: 0,
+      dueDate: DateTime.now().add(const Duration(days: 20)),
+    );
+    invoices.add(invoice);
+    addNotification(
+      userId: account.id,
+      title: 'EUB Connect account created',
+      body: 'Your local demo student account is ready.',
+    );
+    addActivity(
+      actorId: currentAccount?.id ?? 'u-adm-001',
+      title: 'Student added',
+      detail: '${account.fullName} was added to student management.',
+    );
+    _persist();
+    return account;
+  }
+
+  DemoAccount addTeacherAccount({
+    required String fullName,
+    required String email,
+    required String designation,
+    String? departmentId,
+  }) {
+    final index = teacherAccounts.length + 1;
+    final account = DemoAccount(
+      id: _nextId('u-tea'),
+      universityId: 'T${(2000 + index).toString()}',
+      email: email.trim(),
+      password: '123456',
+      fullName: fullName.trim(),
+      role: PortalRole.teacher,
+      departmentId: departmentId ?? 'dept-cse',
+      designation: designation.trim(),
+      phone: '+880171120${index.toString().padLeft(4, '0')}',
+    );
+    accounts.add(account);
+    addActivity(
+      actorId: currentAccount?.id ?? 'u-adm-001',
+      title: 'Teacher added',
+      detail: '${account.fullName} was added to teacher management.',
+    );
+    _persist();
+    return account;
+  }
+
+  DemoAccount addAdministrationStaff({
+    required String fullName,
+    required String email,
+    required String designation,
+    required String officeId,
+  }) {
+    final index = administrationAccounts.length + 1;
+    final account = DemoAccount(
+      id: _nextId('u-admstaff'),
+      universityId: 'EUB-ADM-${(2000 + index).toString()}',
+      email: email.trim(),
+      password: '123456',
+      fullName: fullName.trim(),
+      role: PortalRole.administration,
+      departmentId: 'dept-cse',
+      officeId: officeId,
+      designation: designation.trim(),
+      phone: '+880171130${index.toString().padLeft(4, '0')}',
+      responsibilities: officeById(officeId)?.responsibilities ?? const [],
+    );
+    accounts.add(account);
+    addActivity(
+      actorId: currentAccount?.id ?? 'u-adm-001',
+      title: 'Administration staff added',
+      detail: '${account.fullName} was assigned to ${officeName(officeId)}.',
+    );
+    _persist();
+    return account;
+  }
+
+  void createEventRecord({
+    required String title,
+    required String description,
+    required DateTime date,
+    required String time,
+    required String venue,
+    required int capacity,
+    required String organizer,
+    required String audience,
+  }) {
+    final actor = currentAccount;
+    final event = DemoEvent(
+      id: _nextId('evt'),
+      title: title.trim(),
+      description: description.trim(),
+      date: date,
+      venue: venue.trim(),
+      organizer: organizer.trim(),
+      capacity: capacity,
+      status: 'published',
+      time: time.trim(),
+      audience: audience.trim(),
+    );
+    events.insert(0, event);
+    for (final account in accounts.where((account) {
+      return audience == 'All' || account.role.label == audience;
+    })) {
+      addNotification(
+        userId: account.id,
+        title: 'New event published',
+        body: event.title,
+      );
+    }
+    addActivity(
+      actorId: actor?.id ?? 'u-adm-001',
+      title: 'Event created',
+      detail: '${actor?.fullName ?? 'Admin'} published ${event.title}.',
+    );
+    _persist();
+  }
+
+  void createStudentRequest({
+    required String type,
+    required String notes,
+    String priority = 'Normal',
+  }) {
+    final student = currentAccount;
+    if (student == null || student.role != PortalRole.student) {
+      throw StateError('Only a student account can create a student request.');
+    }
+    final officeId = _officeForRequestType(type);
+    final request = DemoStudentRequest(
+      id: _nextId('req'),
+      studentId: student.id,
+      type: type.trim(),
+      submittedAt: DateTime.now(),
+      assignedOfficeId: officeId,
+      priority: priority,
+      status: 'Submitted',
+      notes: notes.trim(),
+      timeline: ['Submitted by ${student.fullName}'],
+      updatedAt: DateTime.now(),
+    );
+    studentRequests.insert(0, request);
+    addNotification(
+      userId: officeById(officeId)?.headId ?? 'u-admstaff-001',
+      title: 'New student request',
+      body: '${student.fullName} submitted ${request.type}.',
+    );
+    addActivity(
+      actorId: student.id,
+      title: 'Student request submitted',
+      detail: '${student.fullName} submitted ${request.type}.',
+    );
+    _persist();
+  }
+
+  void processFirstStudentRequest() {
+    final actor = currentAccount;
+    final request = visibleStudentRequestsForCurrentOffice().firstWhereOrNull(
+      (item) => !_isClosedStatus(item.status),
+    );
+    if (request == null) {
+      throw StateError('No open student request is available.');
+    }
+    request.status = _nextRequestStatus(request.status);
+    request.updatedAt = DateTime.now();
+    request.timeline.add('${request.status} by ${actor?.fullName ?? 'office'}');
+    addNotification(
+      userId: request.studentId,
+      title: 'Request updated',
+      body: '${request.type} is now ${request.status}.',
+    );
+    addActivity(
+      actorId: actor?.id ?? 'u-admstaff-001',
+      title: 'Student request processed',
+      detail: '${request.type} moved to ${request.status}.',
+    );
+    _persist();
+  }
+
+  void advanceFirstAdmission() {
+    final actor = currentAccount;
+    final application = admissions.firstWhereOrNull(
+      (item) => item.stage != 'Registered' && item.stage != 'Rejected',
+    );
+    if (application == null) {
+      throw StateError('No active admission application is available.');
+    }
+    application.stage = _nextAdmissionStage(application.stage);
+    if (application.stage == 'Registered') {
+      application.paymentStatus = 'Paid';
+    }
+    addActivity(
+      actorId: actor?.id ?? 'u-adm-001',
+      title: 'Admission application advanced',
+      detail: '${application.applicantName} moved to ${application.stage}.',
+    );
+    _persist();
+  }
+
+  void publishFirstPendingResult() {
+    final actor = currentAccount;
+    final exam = examSchedules.firstWhereOrNull(
+      (item) => item.resultPublicationStatus != 'Published',
+    );
+    if (exam == null) {
+      throw StateError('No pending exam result workflow is available.');
+    }
+    exam.resultSubmissionStatus = 'Submitted';
+    exam.resultApprovalStatus = 'Approved';
+    exam.resultPublicationStatus = 'Published';
+    for (final enrollment in enrollments.where(
+      (item) => item.sectionId == exam.sectionId,
+    )) {
+      addNotification(
+        userId: enrollment.studentId,
+        title: 'Result published',
+        body:
+            '${courseById(exam.courseId)?.code ?? 'Course'} result is published.',
+      );
+    }
+    addActivity(
+      actorId: actor?.id ?? 'u-adm-001',
+      title: 'Result published',
+      detail:
+          '${courseById(exam.courseId)?.code ?? exam.courseId} ${exam.examType} result published.',
+    );
+    _persist();
+  }
+
+  void recordPaymentForFirstDueInvoice() {
+    final actor = currentAccount;
+    final invoice = invoices.firstWhereOrNull((item) => item.due > 0);
+    if (invoice == null) {
+      throw StateError('No invoice with due amount is available.');
+    }
+    final amount = min<num>(10000, invoice.due);
+    invoice.paid += amount;
+    final payment = DemoPayment(
+      id: _nextId('pay'),
+      invoiceId: invoice.id,
+      studentId: invoice.studentId,
+      amount: amount,
+      method: 'Admin counter entry',
+      paidAt: DateTime.now(),
+      receiptNo: 'EUB-ADMIN-${DateTime.now().millisecondsSinceEpoch}',
+      status: 'Verified',
+      reference: invoice.id,
+    );
+    payments.insert(0, payment);
+    addNotification(
+      userId: invoice.studentId,
+      title: 'Payment recorded',
+      body: '${_money(amount)} was recorded for ${invoice.semester}.',
+    );
+    addActivity(
+      actorId: actor?.id ?? 'u-adm-001',
+      title: 'Payment recorded',
+      detail: '${_money(amount)} was recorded against ${invoice.id}.',
+    );
+    _persist();
+  }
+
+  void createCourseRecord({
+    required String code,
+    required String title,
+    required String departmentId,
+    required int credits,
+    String? programId,
+    String? prerequisite,
+  }) {
+    final actor = currentAccount;
+    courses.add(
+      DemoCourse(
+        id: _nextId('course'),
+        departmentId: departmentId,
+        programId: programId,
+        code: code.trim().toUpperCase(),
+        title: title.trim(),
+        credits: credits,
+        prerequisite: prerequisite?.trim().isEmpty == true
+            ? null
+            : prerequisite?.trim(),
+      ),
+    );
+    addActivity(
+      actorId: actor?.id ?? 'u-adm-001',
+      title: 'Course created',
+      detail: '${code.trim().toUpperCase()} was added to the course catalog.',
+    );
+    _persist();
+  }
+
+  void createSectionRecord({
+    required String courseId,
+    required String teacherId,
+    required String sectionCode,
+    required String classroom,
+    required String schedule,
+    required int capacity,
+  }) {
+    final actor = currentAccount;
+    final section = DemoSection(
+      id: _nextId('sec'),
+      courseId: courseId,
+      teacherId: teacherId,
+      sectionCode: sectionCode.trim().toUpperCase(),
+      semester: currentSemesterName,
+      capacity: capacity,
+      classroom: classroom.trim(),
+      schedule: schedule.trim(),
+    );
+    sections.add(section);
+    addActivity(
+      actorId: actor?.id ?? 'u-adm-001',
+      title: 'Section created',
+      detail:
+          '${courseById(courseId)?.code ?? courseId} ${section.sectionCode} was created.',
+    );
+    _persist();
+  }
+
+  void reportLostFoundItem({
+    required String type,
+    required String title,
+    required String description,
+    required String location,
+  }) {
+    final reporter = currentAccount;
+    if (reporter == null) {
+      throw StateError('No account is signed in.');
+    }
+    lostFoundItems.insert(
+      0,
+      DemoLostFoundItem(
+        id: _nextId('lf'),
+        reporterId: reporter.id,
+        type: type,
+        title: title.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        reportedAt: DateTime.now(),
+        contact: reporter.email,
+        status: 'Open',
+      ),
+    );
+    addActivity(
+      actorId: reporter.id,
+      title: '$type item reported',
+      detail: '${reporter.fullName} reported "$title".',
+    );
+    _persist();
+  }
+
+  void markFirstLostFoundMatched({bool returned = false}) {
+    final actor = currentAccount;
+    final item = lostFoundItems.firstWhereOrNull(
+      (candidate) =>
+          candidate.status == 'Open' || candidate.status == 'Matched',
+    );
+    if (item == null) {
+      throw StateError('No open lost and found item is available.');
+    }
+    item.status = returned ? 'Returned' : 'Matched';
+    item.claimNote = returned
+        ? 'Returned after local identity verification.'
+        : 'Possible match found by administration.';
+    addActivity(
+      actorId: actor?.id ?? 'u-adm-001',
+      title: returned ? 'Lost item returned' : 'Lost item matched',
+      detail: '${item.title} marked ${item.status}.',
+    );
+    _persist();
+  }
+
+  String _officeForRequestType(String type) {
+    final lower = type.toLowerCase();
+    if (lower.contains('payment')) return 'office-accounts';
+    if (lower.contains('result') ||
+        lower.contains('transcript') ||
+        lower.contains('supplementary')) {
+      return 'office-exams';
+    }
+    if (lower.contains('id')) return 'office-admission';
+    if (lower.contains('course')) return 'office-program';
+    return 'office-registrar';
+  }
+
+  String _nextRequestStatus(String status) {
+    const flow = [
+      'Submitted',
+      'Under Review',
+      'Approved',
+      'Processing',
+      'Ready',
+      'Completed',
+    ];
+    final index = flow.indexOf(status);
+    if (index == -1 || index == flow.length - 1) {
+      return 'Completed';
+    }
+    return flow[index + 1];
+  }
+
+  String _nextAdmissionStage(String stage) {
+    const flow = [
+      'New',
+      'Documents Pending',
+      'Under Review',
+      'Eligible',
+      'Approved',
+      'Payment Pending',
+      'Registered',
+    ];
+    final index = flow.indexOf(stage);
+    if (index == -1 || index == flow.length - 1) {
+      return 'Registered';
+    }
+    return flow[index + 1];
   }
 
   void markAllNotificationsRead() {
@@ -1233,97 +1767,123 @@ class DemoStore extends GetxController {
             icon: Icons.today_outlined,
           ),
         ];
-      case PortalRole.faculty:
-        return [
-          StaticMetric(
-            label: 'Students',
-            value: '${studentAccounts.length}',
-            note: 'Active records',
-            icon: Icons.groups_outlined,
-          ),
-          StaticMetric(
-            label: 'Teachers',
-            value: '${teacherAccounts.length}',
-            note: 'Faculty roster',
-            icon: Icons.co_present_outlined,
-          ),
-          StaticMetric(
-            label: 'Departments',
-            value: '${departments.length}',
-            note: 'Academic units',
-            icon: Icons.account_tree_outlined,
-          ),
-          StaticMetric(
-            label: 'Conflicts',
-            value: '${scheduleConflicts()}',
-            note: 'Calculated routine overlaps',
-            icon: Icons.warning_amber_outlined,
-          ),
-          StaticMetric(
-            label: 'Tickets',
-            value: '${openSupportTickets()}',
-            note: 'Open support',
-            icon: Icons.support_agent_outlined,
-          ),
-          StaticMetric(
-            label: 'Approvals',
-            value: '${pendingApprovals()}',
-            note: 'Pending requests',
-            icon: Icons.verified_outlined,
-          ),
-        ];
+      case PortalRole.administration:
+        return administrationDashboardMetrics();
       case PortalRole.admin:
-        return [
-          StaticMetric(
-            label: 'Students',
-            value: '${studentAccounts.length}',
-            note: 'Active records',
-            icon: Icons.groups_outlined,
-          ),
-          StaticMetric(
-            label: 'Teachers',
-            value: '${teacherAccounts.length}',
-            note: 'Active records',
-            icon: Icons.co_present_outlined,
-          ),
-          StaticMetric(
-            label: 'Departments',
-            value: '${departments.length}',
-            note: 'Active departments',
-            icon: Icons.account_tree_outlined,
-          ),
-          StaticMetric(
-            label: 'Support',
-            value: '${openSupportTickets()}',
-            note: 'Open tickets',
-            icon: Icons.support_agent_outlined,
-          ),
-          StaticMetric(
-            label: 'Approvals',
-            value: '${pendingApprovals()}',
-            note: 'Pending requests',
-            icon: Icons.fact_check_outlined,
-          ),
-          StaticMetric(
-            label: 'Forum reports',
-            value: '${pendingForumReports()}',
-            note: 'Pending moderation',
-            icon: Icons.report_outlined,
-          ),
-          StaticMetric(
-            label: 'Events',
-            value: '${events.length}',
-            note: 'Published records',
-            icon: Icons.event_outlined,
-          ),
-          StaticMetric(
-            label: 'Courses',
-            value: '${courses.length}',
-            note: 'Active catalog',
-            icon: Icons.menu_book_outlined,
-          ),
-        ];
+        return adminKpiMetrics();
     }
+  }
+
+  List<StaticMetric> adminKpiMetrics() {
+    return [
+      StaticMetric(
+        label: 'Total Students',
+        value: '${studentAccounts.length}',
+        note: 'Student records',
+        icon: Icons.groups_outlined,
+      ),
+      StaticMetric(
+        label: 'Active Students',
+        value: '${studentAccounts.where((student) => student.active).length}',
+        note: 'Account status',
+        icon: Icons.person_search_outlined,
+      ),
+      StaticMetric(
+        label: 'Teachers',
+        value: '${teacherAccounts.length}',
+        note: 'Teaching staff',
+        icon: Icons.co_present_outlined,
+      ),
+      StaticMetric(
+        label: 'Administration Staff',
+        value: '${administrationAccounts.length}',
+        note: 'Office staff',
+        icon: Icons.badge_outlined,
+      ),
+      StaticMetric(
+        label: 'Departments',
+        value: '${departments.length}',
+        note: 'Academic units',
+        icon: Icons.account_tree_outlined,
+      ),
+      StaticMetric(
+        label: 'Active Courses',
+        value: '${courses.length}',
+        note: 'Course catalog',
+        icon: Icons.menu_book_outlined,
+      ),
+      StaticMetric(
+        label: 'Active Sections',
+        value: '${activeSectionsCount()}',
+        note: currentSemesterName,
+        icon: Icons.class_outlined,
+      ),
+      StaticMetric(
+        label: 'Semester Enrollment',
+        value: '${currentSemesterEnrollmentCount()}',
+        note: currentSemesterName,
+        icon: Icons.how_to_reg_outlined,
+      ),
+    ];
+  }
+
+  List<StaticMetric> administrationDashboardMetrics() {
+    final account = currentAccount;
+    final officeId = account?.officeId;
+    final requests = visibleStudentRequestsForCurrentOffice();
+    final tickets = visibleSupportTicketsForCurrentOffice();
+    final examsForOffice = officeId == 'office-exams' ? examSchedules : [];
+    final officeMetrics = _officeSpecificMetrics(officeId);
+    return [
+      StaticMetric(
+        label: 'Pending Requests',
+        value:
+            '${requests.where((request) => !_isClosedStatus(request.status)).length}',
+        note: officeName(officeId),
+        icon: Icons.request_page_outlined,
+      ),
+      StaticMetric(
+        label: 'Tasks Today',
+        value:
+            '${requests.where((request) => _sameDay(request.updatedAt ?? request.submittedAt, DateTime.now())).length + tickets.where((ticket) => _sameDay(ticket.lastUpdated ?? ticket.createdAt, DateTime.now())).length}',
+        note: 'Updated records',
+        icon: Icons.today_outlined,
+      ),
+      StaticMetric(
+        label: 'Pending Approvals',
+        value: '${pendingApprovals()}',
+        note: 'Local workflow',
+        icon: Icons.fact_check_outlined,
+      ),
+      StaticMetric(
+        label: 'Student Requests',
+        value: '${requests.length}',
+        note: 'Assigned to office',
+        icon: Icons.school_outlined,
+      ),
+      StaticMetric(
+        label: 'Open Support',
+        value: '${tickets.where((ticket) => ticket.status != 'closed').length}',
+        note: 'Office tickets',
+        icon: Icons.support_agent_outlined,
+      ),
+      StaticMetric(
+        label: 'Documents Review',
+        value:
+            '${requests.where((request) => request.type.toLowerCase().contains('certificate') || request.type.toLowerCase().contains('transcript')).length}',
+        note: 'Academic documents',
+        icon: Icons.description_outlined,
+      ),
+      if (examsForOffice.isNotEmpty)
+        StaticMetric(
+          label: 'Result Workflow',
+          value:
+              '${examsForOffice.where((exam) => exam.resultPublicationStatus != 'Published').length}',
+          note: 'Awaiting publication',
+          icon: Icons.grade_outlined,
+        ),
+      ...officeMetrics,
+    ];
   }
 
   StaticFeature hydrateFeature(StaticFeature base, PortalRole role) {
@@ -1385,6 +1945,48 @@ class DemoStore extends GetxController {
       case 'Toggle first student status':
         toggleFirstUserActive();
         return 'First student account status changed.';
+      case 'Process first student request':
+        processFirstStudentRequest();
+        return 'First open student request moved to the next workflow status.';
+      case 'Advance first admission':
+        advanceFirstAdmission();
+        return 'First active admission application advanced to the next stage.';
+      case 'Publish first pending result':
+        publishFirstPendingResult();
+        return 'First pending exam result workflow has been published.';
+      case 'Record payment':
+        recordPaymentForFirstDueInvoice();
+        return 'Payment recorded against the first invoice with a due balance.';
+      case 'Review requests':
+        return 'Open Student Requests to review request records.';
+      case 'Review reports':
+        resolveFirstForumReport();
+        return 'First pending forum report resolved.';
+      case 'Create course':
+        createCourseRecord(
+          code: 'CSE ${400 + courses.length}',
+          title: 'Special Topics in Computing',
+          departmentId: 'dept-cse',
+          credits: 3,
+          programId: 'program-cse-bsc',
+        );
+        return 'A new demo course was added to the catalog.';
+      case 'Create section':
+        createSectionRecord(
+          courseId: courses.first.id,
+          teacherId: teacherAccounts.first.id,
+          sectionCode: '1A',
+          classroom: 'Room 601',
+          schedule: 'Sunday 10:00 AM',
+          capacity: 40,
+        );
+        return 'A new demo section was created.';
+      case 'Mark lost item matched':
+        markFirstLostFoundMatched();
+        return 'First open lost and found item marked matched.';
+      case 'Mark lost item returned':
+        markFirstLostFoundMatched(returned: true);
+        return 'First matched/open lost and found item marked returned.';
       default:
         return '$featureTitle is populated from local data.';
     }
@@ -1429,6 +2031,256 @@ class DemoStore extends GetxController {
     return forumReports.where((report) => report.status == 'pending').length;
   }
 
+  List<DemoStudentRequest> visibleStudentRequestsForCurrentOffice() {
+    final account = currentAccount;
+    if (account?.role == PortalRole.admin) {
+      return [...studentRequests];
+    }
+    final officeId = account?.officeId;
+    if (officeId == null) {
+      return [];
+    }
+    return studentRequests
+        .where((request) => request.assignedOfficeId == officeId)
+        .toList();
+  }
+
+  List<DemoSupportTicket> visibleSupportTicketsForCurrentOffice() {
+    final account = currentAccount;
+    if (account?.role == PortalRole.admin) {
+      return [...supportTickets];
+    }
+    final officeId = account?.officeId;
+    if (officeId == null) {
+      return [];
+    }
+    return supportTickets
+        .where((ticket) => ticket.assignedOfficeId == officeId)
+        .toList();
+  }
+
+  int activeSectionsCount() {
+    return sections
+        .where((section) => section.semester == currentSemesterName)
+        .length;
+  }
+
+  int currentSemesterEnrollmentCount() {
+    final currentSectionIds = sections
+        .where((section) => section.semester == currentSemesterName)
+        .map((section) => section.id)
+        .toSet();
+    return enrollments
+        .where((enrollment) => currentSectionIds.contains(enrollment.sectionId))
+        .length;
+  }
+
+  double averageAttendancePercent() {
+    if (attendance.isEmpty) {
+      return 0;
+    }
+    final attended = attendance.where((record) {
+      return record.status != DemoAttendanceStatus.absent;
+    }).length;
+    return attended / attendance.length * 100;
+  }
+
+  num totalBilled() {
+    return invoices.fold<num>(0, (total, invoice) => total + invoice.total);
+  }
+
+  num totalCollected() {
+    return payments
+        .where((payment) => payment.status != 'Rejected')
+        .fold<num>(0, (total, payment) => total + payment.amount);
+  }
+
+  num totalOutstanding() {
+    return invoices.fold<num>(0, (total, invoice) => total + invoice.due);
+  }
+
+  int overdueInvoiceCount() {
+    final now = DateTime.now();
+    return invoices.where((invoice) {
+      return invoice.due > 0 && invoice.dueDate.isBefore(now);
+    }).length;
+  }
+
+  bool _sameDay(DateTime left, DateTime right) {
+    return left.year == right.year &&
+        left.month == right.month &&
+        left.day == right.day;
+  }
+
+  bool _isClosedStatus(String status) {
+    final lower = status.toLowerCase();
+    return lower == 'completed' ||
+        lower == 'closed' ||
+        lower == 'resolved' ||
+        lower == 'rejected';
+  }
+
+  List<StaticMetric> _officeSpecificMetrics(String? officeId) {
+    switch (officeId) {
+      case 'office-registrar':
+        return [
+          StaticMetric(
+            label: 'Active Students',
+            value:
+                '${studentAccounts.where((student) => student.active).length}',
+            note: 'Student records',
+            icon: Icons.groups_outlined,
+          ),
+          StaticMetric(
+            label: 'Registration Requests',
+            value:
+                '${studentRequests.where((request) => request.type.toLowerCase().contains('registration')).length}',
+            note: 'Registrar queue',
+            icon: Icons.edit_note_outlined,
+          ),
+          StaticMetric(
+            label: 'Certificates',
+            value:
+                '${studentRequests.where((request) => request.type.toLowerCase().contains('certificate')).length}',
+            note: 'Documents',
+            icon: Icons.workspace_premium_outlined,
+          ),
+        ];
+      case 'office-exams':
+        return [
+          StaticMetric(
+            label: 'Active Exams',
+            value: '${examSchedules.length}',
+            note: 'Exam schedules',
+            icon: Icons.assignment_outlined,
+          ),
+          StaticMetric(
+            label: 'Pending Results',
+            value:
+                '${examSchedules.where((exam) => exam.resultSubmissionStatus != 'Submitted').length}',
+            note: 'Awaiting teacher submission',
+            icon: Icons.rate_review_outlined,
+          ),
+          StaticMetric(
+            label: 'Transcript Requests',
+            value:
+                '${studentRequests.where((request) => request.type == 'Transcript').length}',
+            note: 'Student documents',
+            icon: Icons.description_outlined,
+          ),
+        ];
+      case 'office-accounts':
+        return [
+          StaticMetric(
+            label: 'Fees Collected',
+            value: _money(totalCollected()),
+            note: 'Payment rows',
+            icon: Icons.payments_outlined,
+          ),
+          StaticMetric(
+            label: 'Outstanding',
+            value: _money(totalOutstanding()),
+            note: 'Invoice due',
+            icon: Icons.account_balance_wallet_outlined,
+          ),
+          StaticMetric(
+            label: 'Pending Verification',
+            value:
+                '${payments.where((payment) => payment.status == 'Pending Verification').length}',
+            note: 'Payment review',
+            icon: Icons.verified_outlined,
+          ),
+        ];
+      case 'office-admission':
+        return [
+          StaticMetric(
+            label: 'Applications',
+            value: '${admissions.length}',
+            note: 'Admission records',
+            icon: Icons.how_to_reg_outlined,
+          ),
+          StaticMetric(
+            label: 'Under Review',
+            value:
+                '${admissions.where((item) => item.stage == 'Under Review').length}',
+            note: 'Document review',
+            icon: Icons.fact_check_outlined,
+          ),
+          StaticMetric(
+            label: 'Registered',
+            value:
+                '${admissions.where((item) => item.stage == 'Registered').length}',
+            note: 'Converted applicants',
+            icon: Icons.verified_user_outlined,
+          ),
+        ];
+      case 'office-iqac':
+        return [
+          StaticMetric(
+            label: 'Quality Reviews',
+            value:
+                '${approvals.where((approval) => approval.type.toLowerCase().contains('quality')).length + departments.length}',
+            note: 'Review items',
+            icon: Icons.fact_check_outlined,
+          ),
+          StaticMetric(
+            label: 'Avg Attendance',
+            value: '${averageAttendancePercent().round()}%',
+            note: 'All sections',
+            icon: Icons.query_stats_outlined,
+          ),
+          StaticMetric(
+            label: 'Departments',
+            value: '${departments.length}',
+            note: 'Performance scope',
+            icon: Icons.account_tree_outlined,
+          ),
+        ];
+      case 'office-proctor':
+        return [
+          StaticMetric(
+            label: 'Complaints',
+            value:
+                '${supportTickets.where((ticket) => ticket.assignedOfficeId == 'office-proctor' || ticket.category.toLowerCase().contains('complaint')).length}',
+            note: 'Case management',
+            icon: Icons.gavel_outlined,
+          ),
+          StaticMetric(
+            label: 'Forum Reports',
+            value: '${pendingForumReports()}',
+            note: 'Moderation queue',
+            icon: Icons.report_outlined,
+          ),
+        ];
+      case 'office-ict':
+        return [
+          StaticMetric(
+            label: 'Open Tickets',
+            value:
+                '${supportTickets.where((ticket) => ticket.assignedOfficeId == 'office-ict' && ticket.status != 'closed').length}',
+            note: 'Technical support',
+            icon: Icons.support_agent_outlined,
+          ),
+          StaticMetric(
+            label: 'Labs',
+            value:
+                '${schedules.map((schedule) => schedule.room).where((room) => room.toLowerCase().contains('lab')).toSet().length}',
+            note: 'Lab rooms in routine',
+            icon: Icons.computer_outlined,
+          ),
+        ];
+      default:
+        return [
+          StaticMetric(
+            label: 'Office Staff',
+            value: '${administrationAccounts.length}',
+            note: 'Administration roster',
+            icon: Icons.badge_outlined,
+          ),
+        ];
+    }
+  }
+
   int todayScheduleCount() {
     final today = DateFormat('EEEE').format(DateTime.now());
     return schedulesForCurrentAccount()
@@ -1471,12 +2323,17 @@ class DemoStore extends GetxController {
       case 'Teacher Portal':
       case 'Dashboard':
         return _teacherDetails();
-      case 'Faculty Portal':
-      case 'Administration Panel':
-      case 'Admin Faculty':
-        return _adminFacultyDetails(role);
+      case 'Administration Portal':
+        return _administrationPortalDetails();
+      case 'Admin Dashboard':
+        return _adminDashboardDetails();
       case 'Semester Courses':
+      case 'Courses':
         return _courseDetails();
+      case 'Programs':
+        return _programDetails();
+      case 'Sections':
+        return _sectionDetails();
       case 'Class Routine':
       case 'Routine Management':
         return _routineDetails(role);
@@ -1496,20 +2353,40 @@ class DemoStore extends GetxController {
       case 'Payment History':
       case 'Payment View':
         return _paymentDetails(role);
+      case 'Invoices':
+        return _invoiceDetails();
+      case 'Payments':
+        return _paymentTransactionDetails();
       case 'Scholarships':
+      case 'Scholarships/Waivers':
         return _scholarshipDetails();
+      case 'Admissions':
+        return _admissionDetails();
+      case 'Examinations':
+        return _examDetails();
+      case 'Student Requests':
+        return _studentRequestDetails(role);
       case 'Events':
       case 'Event Management':
         return _eventDetails(role);
+      case 'Clubs':
+        return _clubDetails();
       case 'Community Forum':
       case 'Discussion Board':
         return _forumDetails(role);
+      case 'Community Moderation':
+        return _moderationDetails();
       case 'Student Support':
+      case 'Support Tickets':
         return _supportDetails(role);
+      case 'Complaints/Cases':
+        return _complaintDetails();
       case 'Teacher Management':
         return _teacherManagementDetails();
       case 'Student Management':
         return _studentManagementDetails();
+      case 'Administration Staff':
+        return _administrationStaffDetails();
       case 'Departments':
       case 'Department Management':
         return _departmentDetails();
@@ -1523,6 +2400,7 @@ class DemoStore extends GetxController {
       case 'User Roles':
         return _userRoleDetails();
       case 'System Activity':
+      case 'Activity Log':
         return _activityDetails();
       case 'Settings':
       case 'Notifications':
@@ -1620,56 +2498,114 @@ class DemoStore extends GetxController {
     );
   }
 
-  _ModuleDetails _adminFacultyDetails(PortalRole role) {
+  _ModuleDetails _administrationPortalDetails() {
+    final account = currentAccount;
+    final office = officeById(account?.officeId);
+    final requests = visibleStudentRequestsForCurrentOffice();
+    final tickets = visibleSupportTicketsForCurrentOffice();
     return _ModuleDetails(
-      description: role == PortalRole.admin
-          ? 'Admin overview with live counts for users, approvals, moderation, support, and activities.'
-          : 'Faculty overview using the same students, teachers, routines, reports, and support tickets.',
-      metrics: dashboardMetrics(role),
+      description:
+          'Office workflow for ${office?.name ?? 'Administration'} with requests, support, documents, notices, and activity calculated from local records.',
+      metrics: administrationDashboardMetrics(),
       records: [
         StaticRecord(
-          title: 'Pending approvals',
-          subtitle: '${pendingApprovals()} requests need decision',
-          meta: 'Events, roles, scholarships, content',
-          status: 'Action needed',
-          icon: Icons.fact_check_outlined,
+          title: account?.fullName ?? 'Administration user',
+          subtitle:
+              '${account?.designation ?? 'Administrative staff'} - ${office?.name ?? 'University office'}',
+          meta: account?.universityId ?? 'Employee ID',
+          status: account?.active == false ? 'Inactive' : 'Active',
+          icon: Icons.badge_outlined,
+          details: {
+            'Office': office?.name ?? 'University Administration',
+            'Designation': account?.designation ?? 'Administrative staff',
+            'Employee ID': account?.universityId ?? '',
+            'Responsibilities': (account?.responsibilities ?? const []).join(
+              ', ',
+            ),
+          },
         ),
-        StaticRecord(
-          title: 'Forum moderation',
-          subtitle: '${pendingForumReports()} pending reports',
-          meta:
-              '${forumPosts.where((post) => !post.hidden).length} visible posts',
-          status: 'Live',
-          icon: Icons.report_outlined,
+        ...requests.take(8).map(_studentRequestRecord),
+        ...tickets.take(8).map(_supportTicketRecord),
+      ],
+      actions: const [
+        'Process first student request',
+        'Reply to open ticket',
+        'Create notice',
+      ],
+    );
+  }
+
+  _ModuleDetails _adminDashboardDetails() {
+    return _ModuleDetails(
+      description:
+          'European University of Bangladesh administration and system overview for this local demo. KPIs, finance, admissions, exams, requests, offices, and attention items are all calculated from DemoStore records.',
+      metrics: [
+        ...adminKpiMetrics(),
+        StaticMetric(
+          label: 'Total Billed',
+          value: _money(totalBilled()),
+          note: 'Invoice records',
+          icon: Icons.receipt_long_outlined,
         ),
-        StaticRecord(
-          title: 'Open support',
-          subtitle: '${openSupportTickets()} tickets across student services',
-          meta: 'Finance, academic, IT, transport',
-          status: 'Live',
-          icon: Icons.support_agent_outlined,
+        StaticMetric(
+          label: 'Collected',
+          value: _money(totalCollected()),
+          note: 'Payment records',
+          icon: Icons.payments_outlined,
+        ),
+        StaticMetric(
+          label: 'Outstanding',
+          value: _money(totalOutstanding()),
+          note: 'Invoice due',
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+        StaticMetric(
+          label: 'Admissions',
+          value: '${admissions.length}',
+          note: 'Applicant records',
+          icon: Icons.how_to_reg_outlined,
         ),
       ],
-      actions: role == PortalRole.admin
-          ? const [
-              'Approve first request',
-              'Resolve forum report',
-              'Toggle first student status',
-            ]
-          : const ['Reply to open ticket', 'Resolve forum report'],
+      records: [
+        ...needsAttentionRecords().take(10),
+        ...administrationOfficeRecords().take(12),
+        ...activities.take(8).map(_activityRecord),
+      ],
+      actions: const [
+        'Add Student',
+        'Add Teacher',
+        'Add Administration Staff',
+        'Create notice',
+        'Create event',
+        'Record payment',
+        'Review requests',
+        'Review reports',
+      ],
     );
   }
 
   _ModuleDetails _courseDetails() {
     final sectionRows = visibleSectionsForRole();
+    final isManagementScope =
+        currentRole == PortalRole.admin ||
+        currentRole == PortalRole.administration;
+    final courseRows = isManagementScope
+        ? courses
+        : sectionRows
+              .map((section) => courseById(section.courseId))
+              .whereType<DemoCourse>()
+              .toSet()
+              .toList();
     return _ModuleDetails(
       description:
-          'Courses are resolved from enrollments and teacher assignments.',
+          'Courses are resolved from departments, programs, sections, teachers, schedules, and enrollment records.',
       metrics: [
         StaticMetric(
           label: 'Courses',
-          value: '${sectionRows.length}',
-          note: 'Visible to this account',
+          value: '${courseRows.length}',
+          note: isManagementScope
+              ? 'Course catalog'
+              : 'Visible to this account',
           icon: Icons.menu_book_outlined,
         ),
         StaticMetric(
@@ -1680,26 +2616,156 @@ class DemoStore extends GetxController {
           icon: Icons.credit_score_outlined,
         ),
       ],
-      records: sectionRows.map((section) {
-        final subject = subjectForSection(section.id);
-        final schedule = schedules.firstWhereOrNull(
-          (item) => item.sectionId == section.id,
-        );
+      records: courseRows.map((course) {
+        final program = programForCourse(course);
+        final courseSections = sections
+            .where((section) => section.courseId == course.id)
+            .toList();
+        final enrolled = enrollments
+            .where(
+              (enrollment) => courseSections.any(
+                (section) => section.id == enrollment.sectionId,
+              ),
+            )
+            .map((enrollment) => enrollment.studentId)
+            .toSet()
+            .length;
+        final teachers = courseSections
+            .map((section) => accountById(section.teacherId)?.fullName)
+            .whereType<String>()
+            .toSet()
+            .join(', ');
         return StaticRecord(
-          title: '${subject.code} ${subject.name}',
-          subtitle: subject.teacher,
-          meta: schedule == null
-              ? 'Routine pending'
-              : '${schedule.day} ${schedule.start} - ${schedule.room}',
-          status: 'Section ${section.sectionCode}',
+          title: '${course.code} ${course.title}',
+          subtitle:
+              '${departmentName(course.departmentId)} - ${program?.title ?? 'Program mapping pending'}',
+          meta: '${course.credits} credits, $enrolled enrolled',
+          status: '${courseSections.length} sections',
           icon: Icons.menu_book_outlined,
+          details: {
+            'Department': departmentName(course.departmentId),
+            'Program': program?.title ?? 'Derived from department',
+            'Prerequisite': course.prerequisite ?? 'None',
+            'Teachers': teachers.isEmpty ? 'Unassigned' : teachers,
+            'Relationship': 'Department -> Program -> Course -> Section',
+          },
+        );
+      }).toList(),
+      actions: currentRole == PortalRole.admin
+          ? const ['Create course']
+          : const [],
+    );
+  }
+
+  _ModuleDetails _programDetails() {
+    return _ModuleDetails(
+      description:
+          'Programs are separate from departments, courses, and sections. Active student counts are calculated from student profiles.',
+      metrics: [
+        StaticMetric(
+          label: 'Programs',
+          value: '${programs.length}',
+          note: 'Academic offerings',
+          icon: Icons.school_outlined,
+        ),
+        StaticMetric(
+          label: 'Undergraduate',
+          value:
+              '${programs.where((program) => program.degreeType == 'Undergraduate').length}',
+          note: 'Degree type',
+          icon: Icons.workspace_premium_outlined,
+        ),
+      ],
+      records: programs.map((program) {
+        final activeStudents = studentAccounts.where((student) {
+          return student.program == program.title ||
+              student.program == _shortProgramTitle(program.title);
+        }).length;
+        final courseCount = courses.where((course) {
+          return course.programId == program.id ||
+              (course.programId == null &&
+                  course.departmentId == program.departmentId);
+        }).length;
+        return StaticRecord(
+          title: program.title,
+          subtitle: departmentName(program.departmentId),
+          meta: '${program.code} - ${program.totalCredits} credits',
+          status: '$activeStudents students, $courseCount courses',
+          icon: Icons.school_outlined,
+          details: {
+            'Program code': program.code,
+            'Degree type': program.degreeType,
+            'Duration': program.duration,
+            'Total credits': '${program.totalCredits}',
+            'Department': departmentName(program.departmentId),
+            'Status': program.status,
+          },
         );
       }).toList(),
     );
   }
 
+  _ModuleDetails _sectionDetails() {
+    final rows =
+        currentRole == PortalRole.admin ||
+            currentRole == PortalRole.administration
+        ? sections
+        : visibleSectionsForRole();
+    return _ModuleDetails(
+      description:
+          'Sections connect courses, teachers, rooms, schedules, capacity, and enrolled students.',
+      metrics: [
+        StaticMetric(
+          label: 'Sections',
+          value: '${rows.length}',
+          note: 'Current scope',
+          icon: Icons.class_outlined,
+        ),
+        StaticMetric(
+          label: 'Near Capacity',
+          value:
+              '${rows.where((section) => _sectionEnrollment(section.id) >= section.capacity * 0.9).length}',
+          note: 'Capacity warning',
+          icon: Icons.warning_amber_outlined,
+        ),
+      ],
+      records: rows.map((section) {
+        final course = courseById(section.courseId);
+        final teacher = accountById(section.teacherId);
+        final schedule = schedules.firstWhereOrNull(
+          (item) => item.sectionId == section.id,
+        );
+        final enrolled = _sectionEnrollment(section.id);
+        return StaticRecord(
+          title:
+              '${course?.code ?? 'Course'} ${section.sectionCode} - ${section.semester}',
+          subtitle:
+              '${course?.title ?? 'Course'} - ${teacher?.fullName ?? 'Teacher not assigned'}',
+          meta: schedule == null
+              ? 'Schedule pending'
+              : '${schedule.day} ${schedule.start}',
+          status: '$enrolled/${section.capacity}',
+          icon: Icons.class_outlined,
+          details: {
+            'Course': '${course?.code ?? ''} ${course?.title ?? ''}',
+            'Teacher': teacher?.fullName ?? 'Unassigned',
+            'Classroom': section.classroom ?? schedule?.room ?? 'Room pending',
+            'Schedule':
+                section.schedule ??
+                '${schedule?.day ?? 'TBA'} ${schedule?.start ?? ''}',
+            'Capacity': '${section.capacity}',
+            'Enrolled': '$enrolled',
+          },
+        );
+      }).toList(),
+      actions: currentRole == PortalRole.admin
+          ? const ['Create section']
+          : const [],
+    );
+  }
+
   _ModuleDetails _routineDetails(PortalRole role) {
-    final rows = role == PortalRole.admin || role == PortalRole.faculty
+    final rows = role == PortalRole.admin || role == PortalRole.administration
         ? schedules
         : schedulesForCurrentAccount();
     return _ModuleDetails(
@@ -1995,6 +3061,347 @@ class DemoStore extends GetxController {
     );
   }
 
+  _ModuleDetails _invoiceDetails() {
+    return _ModuleDetails(
+      description:
+          'Semester invoices form coherent student ledgers with tuition, registration, exam, other fees, waivers, payments, and due.',
+      metrics: [
+        StaticMetric(
+          label: 'Invoices',
+          value: '${invoices.length}',
+          note: 'One per seeded student',
+          icon: Icons.receipt_long_outlined,
+        ),
+        StaticMetric(
+          label: 'Total Billed',
+          value: _money(totalBilled()),
+          note: 'Invoice totals',
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+        StaticMetric(
+          label: 'Outstanding',
+          value: _money(totalOutstanding()),
+          note: 'Remaining due',
+          icon: Icons.warning_amber_outlined,
+        ),
+        StaticMetric(
+          label: 'Overdue',
+          value: '${overdueInvoiceCount()}',
+          note: 'Past due invoices',
+          icon: Icons.schedule_outlined,
+        ),
+      ],
+      records: invoices.map(_invoiceRecord).toList(),
+      actions: const ['Record payment'],
+    );
+  }
+
+  _ModuleDetails _paymentTransactionDetails() {
+    return _ModuleDetails(
+      description:
+          'Payments are generated from invoice paid amounts and include method, status, reference, and receipt metadata.',
+      metrics: [
+        StaticMetric(
+          label: 'Payments',
+          value: '${payments.length}',
+          note: 'Transaction rows',
+          icon: Icons.payments_outlined,
+        ),
+        StaticMetric(
+          label: 'Collected',
+          value: _money(totalCollected()),
+          note: 'Payment total',
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+        StaticMetric(
+          label: 'Today',
+          value:
+              '${payments.where((payment) => _sameDay(payment.paidAt, DateTime.now())).length}',
+          note: 'Payments today',
+          icon: Icons.today_outlined,
+        ),
+        StaticMetric(
+          label: 'Verification',
+          value:
+              '${payments.where((payment) => payment.status == 'Pending Verification').length}',
+          note: 'Pending review',
+          icon: Icons.verified_outlined,
+        ),
+      ],
+      records: payments.take(80).map(_paymentRecord).toList(),
+      actions: const ['Record payment'],
+    );
+  }
+
+  _ModuleDetails _admissionDetails() {
+    final stages = [
+      'New',
+      'Documents Pending',
+      'Under Review',
+      'Eligible',
+      'Approved',
+      'Payment Pending',
+      'Registered',
+    ];
+    return _ModuleDetails(
+      description:
+          'Admission pipeline tracks application, document review, eligibility, approval, payment, and registration stages.',
+      metrics: [
+        StaticMetric(
+          label: 'Applications',
+          value: '${admissions.length}',
+          note: 'Total applicants',
+          icon: Icons.how_to_reg_outlined,
+        ),
+        StaticMetric(
+          label: 'New',
+          value: '${admissions.where((item) => item.stage == 'New').length}',
+          note: 'Fresh applications',
+          icon: Icons.fiber_new_outlined,
+        ),
+        StaticMetric(
+          label: 'Under Review',
+          value:
+              '${admissions.where((item) => item.stage == 'Under Review').length}',
+          note: 'Office review',
+          icon: Icons.fact_check_outlined,
+        ),
+        StaticMetric(
+          label: 'Enrolled',
+          value:
+              '${admissions.where((item) => item.stage == 'Registered').length}',
+          note: 'Registered applicants',
+          icon: Icons.verified_user_outlined,
+        ),
+      ],
+      records: [
+        StaticRecord(
+          title: 'Admission funnel',
+          subtitle: stages
+              .map((stage) {
+                final count = admissions
+                    .where((item) => item.stage == stage)
+                    .length;
+                return '$stage: $count';
+              })
+              .join(' -> '),
+          meta:
+              'Application -> Document Review -> Eligible -> Approved -> Payment -> Registered',
+          status: '${admissions.length} applications',
+          icon: Icons.filter_alt_outlined,
+        ),
+        ...admissions.map((application) {
+          final program = programById(application.programId);
+          final missing = application.documents.entries
+              .where((entry) => !entry.value)
+              .map((entry) => entry.key)
+              .join(', ');
+          return StaticRecord(
+            title: '${application.id} - ${application.applicantName}',
+            subtitle: program?.title ?? application.programId,
+            meta:
+                '${_date(application.applicationDate)} - ${application.contact}',
+            status: application.stage,
+            icon: Icons.how_to_reg_outlined,
+            details: {
+              'Application ID': application.id,
+              'Program': program?.title ?? application.programId,
+              'Contact': application.contact,
+              'Previous education': application.previousEducation,
+              'Application date': _date(application.applicationDate),
+              'Documents': application.documents.entries
+                  .map(
+                    (entry) =>
+                        '${entry.key}: ${entry.value ? 'OK' : 'Missing'}',
+                  )
+                  .join(', '),
+              'Missing documents': missing.isEmpty ? 'None' : missing,
+              'Admission status': application.stage,
+              'Payment status': application.paymentStatus,
+            },
+          );
+        }),
+      ],
+      actions: const ['Advance first admission'],
+    );
+  }
+
+  _ModuleDetails _examDetails() {
+    return _ModuleDetails(
+      description:
+          'Exam management includes schedules, exam rooms, invigilators, admit-card status, result submission, approval, publication, and supplementary cases.',
+      metrics: [
+        StaticMetric(
+          label: 'Upcoming Exams',
+          value:
+              '${examSchedules.where((exam) => exam.date.isAfter(DateTime.now())).length}',
+          note: 'Schedule records',
+          icon: Icons.assignment_outlined,
+        ),
+        StaticMetric(
+          label: 'Results Submission',
+          value:
+              '${examSchedules.where((exam) => exam.resultSubmissionStatus != 'Submitted').length}',
+          note: 'Awaiting teachers',
+          icon: Icons.rate_review_outlined,
+        ),
+        StaticMetric(
+          label: 'Approval',
+          value:
+              '${examSchedules.where((exam) => exam.resultApprovalStatus != 'Approved').length}',
+          note: 'Exam office review',
+          icon: Icons.verified_outlined,
+        ),
+        StaticMetric(
+          label: 'Published',
+          value:
+              '${examSchedules.where((exam) => exam.resultPublicationStatus == 'Published').length}',
+          note: 'Student-visible results',
+          icon: Icons.publish_outlined,
+        ),
+      ],
+      records: examSchedules.map(_examRecord).toList(),
+      actions: const ['Publish first pending result'],
+    );
+  }
+
+  _ModuleDetails _studentRequestDetails(PortalRole role) {
+    final account = currentAccount;
+    final rows = role == PortalRole.student
+        ? studentRequests
+              .where((request) => request.studentId == account?.id)
+              .toList()
+        : role == PortalRole.administration
+        ? visibleStudentRequestsForCurrentOffice()
+        : studentRequests;
+    return _ModuleDetails(
+      description:
+          'Student requests cover transcripts, certificates, verification, ID replacement, registration, payment, result correction, and supplementary exam workflows.',
+      metrics: [
+        StaticMetric(
+          label: 'Requests',
+          value: '${rows.length}',
+          note: 'Current scope',
+          icon: Icons.request_page_outlined,
+        ),
+        StaticMetric(
+          label: 'Open',
+          value:
+              '${rows.where((request) => !_isClosedStatus(request.status)).length}',
+          note: 'Needs processing',
+          icon: Icons.pending_actions_outlined,
+        ),
+      ],
+      records: rows.map(_studentRequestRecord).toList(),
+      actions: role == PortalRole.student
+          ? const ['Create student request']
+          : const ['Process first student request'],
+    );
+  }
+
+  _ModuleDetails _clubDetails() {
+    return _ModuleDetails(
+      description:
+          'Clubs include advisor, president, active members, events, and membership status.',
+      metrics: [
+        StaticMetric(
+          label: 'Clubs',
+          value: '${clubs.length}',
+          note: 'Campus organizations',
+          icon: Icons.groups_2_outlined,
+        ),
+        StaticMetric(
+          label: 'Memberships',
+          value:
+              '${clubMemberships.where((item) => item.status == 'active').length}',
+          note: 'Active members',
+          icon: Icons.how_to_reg_outlined,
+        ),
+      ],
+      records: clubs.map((club) {
+        final advisor = accountById(club.advisorId);
+        final president = accountById(club.presidentId);
+        final members = clubMemberships
+            .where((membership) => membership.clubId == club.id)
+            .length;
+        final eventCount = events
+            .where(
+              (event) => event.organizer.toLowerCase().contains(
+                club.name.split(' ').first.toLowerCase(),
+              ),
+            )
+            .length;
+        return StaticRecord(
+          title: club.name,
+          subtitle: club.description,
+          meta: 'Advisor: ${advisor?.fullName ?? 'Pending'}',
+          status: '$members members, $eventCount events',
+          icon: Icons.groups_2_outlined,
+          details: {
+            'Advisor': advisor?.fullName ?? 'Pending',
+            'President': president?.fullName ?? 'Pending',
+            'Members': '$members',
+            'Events': '$eventCount',
+            'Membership status': 'Open for local demo registration',
+          },
+        );
+      }).toList(),
+    );
+  }
+
+  _ModuleDetails _moderationDetails() {
+    return _ModuleDetails(
+      description:
+          'Forum moderation shows reports with author, reporter, reason, content, status, and local actions.',
+      metrics: [
+        StaticMetric(
+          label: 'Reports',
+          value: '${forumReports.length}',
+          note: 'All reports',
+          icon: Icons.report_outlined,
+        ),
+        StaticMetric(
+          label: 'Pending',
+          value: '${pendingForumReports()}',
+          note: 'Need review',
+          icon: Icons.pending_actions_outlined,
+        ),
+      ],
+      records: forumReports.map(_forumReportRecord).toList(),
+      actions: const ['Resolve forum report', 'Hide reported content'],
+    );
+  }
+
+  _ModuleDetails _complaintDetails() {
+    final rows = {
+      ...supportTickets.where((ticket) {
+        return ticket.category.toLowerCase().contains('complaint') ||
+            ticket.assignedOfficeId == 'office-proctor';
+      }),
+      ...supportTickets.where((ticket) => ticket.priority == 'High').take(4),
+    }.toList();
+    return _ModuleDetails(
+      description:
+          'Complaints and cases combine proctor-office cases, escalated support, and high-priority student issues.',
+      metrics: [
+        StaticMetric(
+          label: 'Cases',
+          value: '${rows.length}',
+          note: 'Complaint scope',
+          icon: Icons.gavel_outlined,
+        ),
+        StaticMetric(
+          label: 'Escalated',
+          value: '${rows.where((ticket) => ticket.priority == 'High').length}',
+          note: 'High priority',
+          icon: Icons.warning_amber_outlined,
+        ),
+      ],
+      records: rows.map(_supportTicketRecord).toList(),
+      actions: const ['Reply to open ticket'],
+    );
+  }
+
   _ModuleDetails _scholarshipDetails() {
     return _ModuleDetails(
       description:
@@ -2048,14 +3455,24 @@ class DemoStore extends GetxController {
         return StaticRecord(
           title: event.title,
           subtitle: event.description,
-          meta: '${_date(event.date)} - ${event.venue}',
+          meta: '${_date(event.date)} ${event.time} - ${event.venue}',
           status: '$count/${event.capacity}',
           icon: Icons.event_outlined,
+          details: {
+            'Organizer': event.organizer,
+            'Date': _date(event.date),
+            'Time': event.time,
+            'Venue': event.venue,
+            'Capacity': '${event.capacity}',
+            'Registered': '$count',
+            'Audience': event.audience,
+            'Status': event.status,
+          },
         );
       }).toList(),
       actions: role == PortalRole.student
           ? const ['Register next event']
-          : const ['Approve first request'],
+          : const ['Create event', 'Approve first request'],
     );
   }
 
@@ -2104,7 +3521,7 @@ class DemoStore extends GetxController {
           icon: Icons.forum_outlined,
         );
       }).toList(),
-      actions: role == PortalRole.admin || role == PortalRole.faculty
+      actions: role == PortalRole.admin || role == PortalRole.administration
           ? const ['Resolve forum report', 'Hide reported content']
           : const ['Create forum post', 'Report latest post'],
     );
@@ -2116,6 +3533,8 @@ class DemoStore extends GetxController {
         ? supportTickets
               .where((ticket) => ticket.requesterId == account?.id)
               .toList()
+        : role == PortalRole.administration
+        ? visibleSupportTicketsForCurrentOffice()
         : supportTickets;
     return _ModuleDetails(
       description:
@@ -2134,19 +3553,7 @@ class DemoStore extends GetxController {
           icon: Icons.mark_chat_unread_outlined,
         ),
       ],
-      records: rows.map((ticket) {
-        final count = supportMessages
-            .where((message) => message.ticketId == ticket.id)
-            .length;
-        final requester = accountById(ticket.requesterId);
-        return StaticRecord(
-          title: ticket.subject,
-          subtitle: '${ticket.category} - ${requester?.fullName ?? 'Student'}',
-          meta: '$count messages, ${ticket.priority} priority',
-          status: ticket.status,
-          icon: Icons.support_agent_outlined,
-        );
-      }).toList(),
+      records: rows.map(_supportTicketRecord).toList(),
       actions: role == PortalRole.student
           ? const ['Create support ticket']
           : const ['Reply to open ticket'],
@@ -2166,17 +3573,58 @@ class DemoStore extends GetxController {
         ),
       ],
       records: teacherAccounts.map((teacher) {
-        final assigned = sections
+        final assignedSections = sections
             .where((section) => section.teacherId == teacher.id)
+            .toList();
+        final assigned = assignedSections.length;
+        final studentCount = enrollments
+            .where(
+              (enrollment) => assignedSections.any(
+                (section) => section.id == enrollment.sectionId,
+              ),
+            )
+            .map((enrollment) => enrollment.studentId)
+            .toSet()
             .length;
+        final pendingGrades = submissions.where((submission) {
+          final assignment = assignments.firstWhereOrNull(
+            (item) => item.id == submission.assignmentId,
+          );
+          return assignment != null &&
+              assignedSections.any(
+                (section) => section.id == assignment.sectionId,
+              ) &&
+              submission.status != 'graded';
+        }).length;
         return StaticRecord(
           title: teacher.fullName,
-          subtitle: departmentName(teacher.departmentId),
+          subtitle:
+              '${teacher.universityId} - ${departmentName(teacher.departmentId)}',
           meta: teacher.designation ?? 'Teacher',
-          status: '$assigned sections',
+          status: '$assigned sections, $studentCount students',
           icon: Icons.co_present_outlined,
+          details: {
+            'Employee ID': teacher.universityId,
+            'Department': departmentName(teacher.departmentId),
+            'Designation': teacher.designation ?? 'Teacher',
+            'Assigned courses': assignedSections
+                .map((section) => subjectForSection(section.id).code)
+                .toSet()
+                .join(', '),
+            'Sections': assignedSections
+                .map((section) => section.sectionCode)
+                .toSet()
+                .join(', '),
+            'Student count': '$studentCount',
+            'Office hours': 'Sun/Tue 02:00 PM - 04:00 PM',
+            'Pending grading': '$pendingGrades',
+            'Status': teacher.active ? 'Active' : 'Inactive',
+          },
         );
       }).toList(),
+      actions: currentRole == PortalRole.admin
+          ? const ['Add Teacher']
+          : const [],
     );
   }
 
@@ -2193,20 +3641,105 @@ class DemoStore extends GetxController {
         ),
       ],
       records: studentAccounts.map((student) {
+        final invoiceRows = invoices
+            .where((invoice) => invoice.studentId == student.id)
+            .toList();
+        final paid = invoiceRows.fold<num>(
+          0,
+          (total, invoice) => total + invoice.paid,
+        );
+        final due = invoiceRows.fold<num>(
+          0,
+          (total, invoice) => total + invoice.due,
+        );
+        final resultRows = results
+            .where((result) => result.studentId == student.id)
+            .toList();
+        final requestCount = studentRequests
+            .where((request) => request.studentId == student.id)
+            .length;
         return StaticRecord(
           title: student.fullName,
           subtitle:
               '${student.universityId} - ${departmentName(student.departmentId)}',
           meta: '${student.semester ?? ''} ${student.section ?? ''}',
-          status: student.active
-              ? '${studentAttendancePercent(student.id).round()}%'
-              : 'Inactive',
+          status: due <= 0 ? 'Clear' : '${_money(due)} due',
           icon: Icons.person_outline,
+          details: {
+            'Student ID': student.universityId,
+            'Department': departmentName(student.departmentId),
+            'Program': student.program ?? '',
+            'Intake/Batch': student.batch ?? '',
+            'Semester': student.semester ?? '',
+            'Section': student.section ?? '',
+            'Credits completed': '${student.completedCredits}',
+            'Current credits': '${student.currentCredits}',
+            'CGPA':
+                student.cgpa?.toStringAsFixed(2) ??
+                _cgpa(resultRows).toStringAsFixed(2),
+            'Account status': student.active ? 'Active' : 'Inactive',
+            'Payment status': due <= 0 ? 'Clear' : 'Outstanding',
+            'Advisor': _advisorName(student.departmentId),
+            'Attendance': '${studentAttendancePercent(student.id).round()}%',
+            'Paid': _money(paid),
+            'Outstanding': _money(due),
+            'Requests': '$requestCount',
+          },
         );
       }).toList(),
       actions: currentRole == PortalRole.admin
-          ? const ['Toggle first student status']
+          ? const ['Add Student', 'Toggle first student status']
           : const [],
+    );
+  }
+
+  _ModuleDetails _administrationStaffDetails() {
+    return _ModuleDetails(
+      description:
+          'Administration staff are separate from Admin users and are assigned to EUB-style offices with responsibilities.',
+      metrics: [
+        StaticMetric(
+          label: 'Staff',
+          value: '${administrationAccounts.length}',
+          note: 'Administration role',
+          icon: Icons.badge_outlined,
+        ),
+        StaticMetric(
+          label: 'Offices',
+          value: '${offices.length}',
+          note: 'Operational units',
+          icon: Icons.account_balance_outlined,
+        ),
+      ],
+      records: administrationAccounts.map((staff) {
+        final office = officeById(staff.officeId);
+        final taskCount =
+            studentRequests
+                .where((request) => request.assignedOfficeId == staff.officeId)
+                .length +
+            supportTickets
+                .where((ticket) => ticket.assignedOfficeId == staff.officeId)
+                .length;
+        return StaticRecord(
+          title: staff.fullName,
+          subtitle:
+              '${staff.universityId} - ${office?.name ?? 'Administration'}',
+          meta: staff.designation ?? 'Administrative staff',
+          status: '$taskCount current tasks',
+          icon: Icons.badge_outlined,
+          details: {
+            'Employee ID': staff.universityId,
+            'Office': office?.name ?? 'Administration',
+            'Designation': staff.designation ?? '',
+            'Email': staff.email,
+            'Phone': staff.phone ?? '',
+            'Responsibilities': staff.responsibilities.join(', '),
+            'Current tasks': '$taskCount',
+            'Status': staff.active ? 'Active' : 'Inactive',
+          },
+        );
+      }).toList(),
+      actions: const ['Add Administration Staff'],
     );
   }
 
@@ -2246,12 +3779,28 @@ class DemoStore extends GetxController {
         final courseCount = courses
             .where((course) => course.departmentId == department.id)
             .length;
+        final deptSections = sections.where((section) {
+          final course = courseById(section.courseId);
+          return course?.departmentId == department.id;
+        }).toList();
+        final avgAttendance = _departmentAttendancePercent(department.id);
+        final avgCgpa = _departmentCgpa(department.id);
         return StaticRecord(
           title: department.name,
           subtitle: department.faculty,
           meta: '$studentCount students, $teacherCount teachers',
           status: '$courseCount courses',
           icon: Icons.account_tree_outlined,
+          details: {
+            'Department code': department.shortName,
+            'Head/Chairman': _advisorName(department.id),
+            'Teachers': '$teacherCount',
+            'Students': '$studentCount',
+            'Courses': '$courseCount',
+            'Active sections': '${deptSections.length}',
+            'Average attendance': '${avgAttendance.round()}%',
+            'Average CGPA': avgCgpa.toStringAsFixed(2),
+          },
         );
       }).toList(),
     );
@@ -2259,48 +3808,50 @@ class DemoStore extends GetxController {
 
   _ModuleDetails _calendarDetails() {
     final rows = [
-      StaticRecord(
-        title: 'Registration opens',
-        subtitle: 'Spring 2026 advising and online registration',
-        meta: 'Jan 05, 2026',
-        status: 'Done',
-        icon: Icons.event_available_outlined,
-      ),
-      StaticRecord(
-        title: 'Class start',
-        subtitle: 'Regular classes begin for all departments',
-        meta: 'Jan 18, 2026',
-        status: 'Done',
-        icon: Icons.school_outlined,
-      ),
-      StaticRecord(
-        title: 'Midterm exam window',
-        subtitle: 'Department-wise routine published in notice board',
-        meta: 'Mar 10-21, 2026',
-        status: 'Done',
-        icon: Icons.assignment_outlined,
-      ),
-      StaticRecord(
-        title: 'Independence Day holiday',
-        subtitle: 'University closed for national holiday',
-        meta: 'Mar 26, 2026',
-        status: 'Holiday',
-        icon: Icons.flag_outlined,
-      ),
-      StaticRecord(
-        title: 'Final exam form fill-up',
-        subtitle: 'Students complete financial clearance and exam forms',
-        meta: 'Apr 22-30, 2026',
-        status: 'Upcoming',
-        icon: Icons.fact_check_outlined,
-      ),
-      StaticRecord(
-        title: 'Result publication',
-        subtitle: 'Final grades released through the portal',
-        meta: 'Jun 10, 2026',
-        status: 'Upcoming',
-        icon: Icons.grade_outlined,
-      ),
+      ...academicSemesters.map((semester) {
+        return StaticRecord(
+          title: semester.name,
+          subtitle:
+              'Registration ${_date(semester.registrationStart)}-${_date(semester.registrationEnd)}, classes from ${_date(semester.classStart)}',
+          meta:
+              'Final ${_date(semester.finalStart)}-${_date(semester.finalEnd)}',
+          status: semester.status,
+          icon: Icons.calendar_month_outlined,
+          details: {
+            'Registration start': _date(semester.registrationStart),
+            'Registration end': _date(semester.registrationEnd),
+            'Class start': _date(semester.classStart),
+            'Midterm period':
+                '${_date(semester.midtermStart)} - ${_date(semester.midtermEnd)}',
+            'Final exam period':
+                '${_date(semester.finalStart)} - ${_date(semester.finalEnd)}',
+            'Result publication': _date(semester.resultPublication),
+            'Semester status': semester.status,
+          },
+        );
+      }),
+      ...calendarEvents.map((event) {
+        return StaticRecord(
+          title: event.title,
+          subtitle: '${event.type} - ${event.audience}',
+          meta: _dateRange(event.startDate, event.endDate),
+          status: event.status,
+          icon: Icons.event_available_outlined,
+          details: {
+            'Type': event.type,
+            'Audience': event.audience,
+            'Start': _date(event.startDate),
+            'End': _date(event.endDate),
+            'Semester':
+                academicSemesters
+                    .firstWhereOrNull(
+                      (semester) => semester.id == event.semesterId,
+                    )
+                    ?.name ??
+                event.semesterId,
+          },
+        );
+      }),
     ];
     return _ModuleDetails(
       description:
@@ -2394,10 +3945,23 @@ class DemoStore extends GetxController {
               '${author?.fullName ?? 'Office'} - ${subject?.code ?? notice.target}',
           status: _date(notice.publishedAt),
           icon: Icons.campaign_outlined,
+          details: {
+            'Category': notice.category,
+            'Audience': notice.audience ?? notice.target,
+            'Publish date': _date(notice.publishedAt),
+            'Expiry date': notice.expiryDate == null
+                ? 'None'
+                : _date(notice.expiryDate!),
+            'Priority': notice.priority,
+            'Attachment': notice.attachmentName ?? 'None',
+            'Status': notice.status,
+          },
         );
       }).toList(),
       actions: role == PortalRole.teacher
           ? const ['Publish course notice']
+          : role == PortalRole.admin || role == PortalRole.administration
+          ? const ['Create notice']
           : const [],
     );
   }
@@ -2507,42 +4071,50 @@ class DemoStore extends GetxController {
   }
 
   _ModuleDetails _lostFoundDetails() {
-    final rows = [
-      StaticRecord(
-        title: 'Student ID card found near CSE Lab 2',
-        subtitle:
-            'Belongs to a Spring 2026 CSE student. Collected by department office.',
-        meta: 'Jul 24, 2026',
-        status: 'Found',
-        icon: Icons.badge_outlined,
-      ),
-      StaticRecord(
-        title: 'Black calculator lost after EEE lab',
-        subtitle: 'Casio scientific calculator with name sticker on back.',
-        meta: 'Jul 23, 2026',
-        status: 'Lost',
-        icon: Icons.calculate_outlined,
-      ),
-      StaticRecord(
-        title: 'Blue notebook found in library',
-        subtitle: 'Contains DBMS normalization notes and assignment checklist.',
-        meta: 'Jul 22, 2026',
-        status: 'Found',
-        icon: Icons.menu_book_outlined,
-      ),
-    ];
     return _ModuleDetails(
       description:
-          'Lost and found records are populated with realistic campus items.',
+          'Lost and found cases support browse, search/filter, details, claim notes, match/return/close status, and local admin case review.',
       metrics: [
         StaticMetric(
           label: 'Records',
-          value: '${rows.length}',
+          value: '${lostFoundItems.length}',
           note: 'Campus items',
           icon: Icons.search_outlined,
         ),
+        StaticMetric(
+          label: 'Open',
+          value:
+              '${lostFoundItems.where((item) => item.status == 'Open').length}',
+          note: 'Need follow-up',
+          icon: Icons.pending_actions_outlined,
+        ),
       ],
-      records: rows,
+      records: lostFoundItems.map((item) {
+        final reporter = accountById(item.reporterId);
+        return StaticRecord(
+          title: item.title,
+          subtitle: item.description,
+          meta: '${item.type} at ${item.location}',
+          status: item.status,
+          icon: item.type == 'Found'
+              ? Icons.inventory_2_outlined
+              : Icons.search_outlined,
+          details: {
+            'Reporter': reporter?.fullName ?? item.reporterId,
+            'Role': reporter?.role.label ?? 'Unknown',
+            'Type': item.type,
+            'Location': item.location,
+            'Reported': _date(item.reportedAt),
+            'Contact': item.contact,
+            'Matched item': item.matchedItemId ?? 'None',
+            'Claim note': item.claimNote ?? 'No claim note yet',
+            'Status': item.status,
+          },
+        );
+      }).toList(),
+      actions: currentRole == PortalRole.admin
+          ? const ['Mark lost item matched', 'Mark lost item returned']
+          : const ['Report lost item', 'Report found item'],
     );
   }
 
@@ -2561,6 +4133,347 @@ class DemoStore extends GetxController {
         ),
       ],
     );
+  }
+
+  List<StaticRecord> needsAttentionRecords() {
+    final attention = <StaticRecord>[
+      if (overdueInvoiceCount() > 0)
+        StaticRecord(
+          title: 'Overdue student invoices',
+          subtitle:
+              '${overdueInvoiceCount()} invoices have due dates before today.',
+          meta: _money(
+            invoices
+                .where(
+                  (invoice) =>
+                      invoice.due > 0 &&
+                      invoice.dueDate.isBefore(DateTime.now()),
+                )
+                .fold<num>(0, (total, invoice) => total + invoice.due),
+          ),
+          status: 'Finance',
+          icon: Icons.warning_amber_outlined,
+        ),
+      StaticRecord(
+        title: 'Attendance below threshold',
+        subtitle:
+            '${studentAccounts.where((student) => studentAttendancePercent(student.id) < 75).length} students are below 75% attendance.',
+        meta: '${averageAttendancePercent().round()}% average',
+        status: 'Academic',
+        icon: Icons.how_to_reg_outlined,
+      ),
+      StaticRecord(
+        title: 'Ungraded submissions',
+        subtitle:
+            '${submissions.where((submission) => submission.status != 'graded').length} submissions are waiting for grading.',
+        meta: 'Teacher workflow',
+        status: 'Academic',
+        icon: Icons.rate_review_outlined,
+      ),
+      StaticRecord(
+        title: 'Unresolved support tickets',
+        subtitle: '${openSupportTickets()} tickets remain open or pending.',
+        meta: 'Student service desk',
+        status: 'Support',
+        icon: Icons.support_agent_outlined,
+      ),
+      StaticRecord(
+        title: 'Forum reports pending',
+        subtitle: '${pendingForumReports()} moderation reports need review.',
+        meta: 'Community',
+        status: 'Moderation',
+        icon: Icons.report_outlined,
+      ),
+      StaticRecord(
+        title: 'Results awaiting publication',
+        subtitle:
+            '${examSchedules.where((exam) => exam.resultPublicationStatus != 'Published').length} exam result workflows are not published.',
+        meta: 'Examination office',
+        status: 'Exam',
+        icon: Icons.publish_outlined,
+      ),
+      StaticRecord(
+        title: 'Sections near capacity',
+        subtitle:
+            '${sections.where((section) => _sectionEnrollment(section.id) >= section.capacity * 0.9).length} sections are above 90% capacity.',
+        meta: currentSemesterName,
+        status: 'Academic',
+        icon: Icons.class_outlined,
+      ),
+    ];
+    return attention;
+  }
+
+  List<StaticRecord> administrationOfficeRecords() {
+    return offices.map((office) {
+      final head = accountById(office.headId);
+      final staffCount = administrationAccounts
+          .where((staff) => staff.officeId == office.id)
+          .length;
+      final requestCount = studentRequests
+          .where((request) => request.assignedOfficeId == office.id)
+          .length;
+      final ticketCount = supportTickets
+          .where((ticket) => ticket.assignedOfficeId == office.id)
+          .length;
+      final openTasks =
+          studentRequests.where((request) {
+            return request.assignedOfficeId == office.id &&
+                !_isClosedStatus(request.status);
+          }).length +
+          supportTickets.where((ticket) {
+            return ticket.assignedOfficeId == office.id &&
+                ticket.status != 'closed';
+          }).length;
+      return StaticRecord(
+        title: office.name,
+        subtitle: head?.fullName ?? 'Responsible person pending',
+        meta: '$staffCount staff, $requestCount requests, $ticketCount tickets',
+        status: '$openTasks open tasks',
+        icon: Icons.account_balance_outlined,
+        details: {
+          'Head / responsible person': head?.fullName ?? 'Pending',
+          'Staff count': '$staffCount',
+          'Open tasks': '$openTasks',
+          'Pending requests': '$requestCount',
+          'Status': office.status,
+          'Responsibilities': office.responsibilities.join(', '),
+        },
+      );
+    }).toList();
+  }
+
+  StaticRecord _studentRequestRecord(DemoStudentRequest request) {
+    final student = accountById(request.studentId);
+    return StaticRecord(
+      title: '${request.id} - ${request.type}',
+      subtitle: student?.fullName ?? request.studentId,
+      meta: '${officeName(request.assignedOfficeId)} - ${request.priority}',
+      status: request.status,
+      icon: Icons.request_page_outlined,
+      details: {
+        'Request ID': request.id,
+        'Student': student?.fullName ?? request.studentId,
+        'Student ID': student?.universityId ?? request.studentId,
+        'Type': request.type,
+        'Submitted': _date(request.submittedAt),
+        'Assigned office': officeName(request.assignedOfficeId),
+        'Priority': request.priority,
+        'Status': request.status,
+        'Notes': request.notes,
+        'Timeline': request.timeline.join(' | '),
+      },
+    );
+  }
+
+  StaticRecord _supportTicketRecord(DemoSupportTicket ticket) {
+    final count = supportMessages
+        .where((message) => message.ticketId == ticket.id)
+        .length;
+    final requester = accountById(ticket.requesterId);
+    return StaticRecord(
+      title: ticket.subject,
+      subtitle: '${ticket.category} - ${requester?.fullName ?? 'Student'}',
+      meta: '$count messages, ${ticket.priority} priority',
+      status: ticket.status,
+      icon: Icons.support_agent_outlined,
+      details: {
+        'Ticket ID': ticket.id,
+        'Created by': requester?.fullName ?? ticket.requesterId,
+        'User role': ticket.userRole ?? requester?.role.label ?? '',
+        'Assigned office': officeName(ticket.assignedOfficeId),
+        'Category': ticket.category,
+        'Priority': ticket.priority,
+        'Created': _dateTime(ticket.createdAt),
+        'Last updated': ticket.lastUpdated == null
+            ? 'Not updated'
+            : _dateTime(ticket.lastUpdated!),
+        'Description': ticket.description,
+        'Resolution': ticket.resolution ?? 'Pending',
+      },
+    );
+  }
+
+  StaticRecord _invoiceRecord(DemoInvoice invoice) {
+    final student = accountById(invoice.studentId);
+    return StaticRecord(
+      title: '${invoice.id} - ${student?.fullName ?? invoice.studentId}',
+      subtitle: invoice.items.entries
+          .map((entry) => '${entry.key}: ${_money(entry.value)}')
+          .join(', '),
+      meta: '${invoice.semester} - due ${_date(invoice.dueDate)}',
+      status: invoice.due <= 0 ? 'Paid' : _money(invoice.due),
+      icon: Icons.receipt_long_outlined,
+      details: {
+        'Invoice': invoice.id,
+        'Student': student?.fullName ?? invoice.studentId,
+        'Student ID': student?.universityId ?? invoice.studentId,
+        'Semester': invoice.semester,
+        'Subtotal': _money(invoice.subtotal),
+        'Scholarship/Waiver': _money(invoice.waiver),
+        'Paid': _money(invoice.paid),
+        'Outstanding balance': _money(invoice.due),
+        'Due date': _date(invoice.dueDate),
+        'Payment status': invoice.due <= 0 ? 'Clear' : 'Outstanding',
+      },
+    );
+  }
+
+  StaticRecord _paymentRecord(DemoPayment payment) {
+    final student = accountById(payment.studentId);
+    return StaticRecord(
+      title: payment.receiptNo,
+      subtitle: '${student?.fullName ?? payment.studentId} - ${payment.method}',
+      meta: '${_date(payment.paidAt)} - ${payment.invoiceId}',
+      status: _money(payment.amount),
+      icon: Icons.payments_outlined,
+      details: {
+        'Transaction ID': payment.id,
+        'Student': student?.fullName ?? payment.studentId,
+        'Invoice': payment.invoiceId,
+        'Date': _dateTime(payment.paidAt),
+        'Amount': _money(payment.amount),
+        'Method': payment.method,
+        'Status': payment.status,
+        'Reference': payment.reference ?? payment.receiptNo,
+      },
+    );
+  }
+
+  StaticRecord _examRecord(DemoExamSchedule exam) {
+    final course = courseById(exam.courseId);
+    final section = sectionById(exam.sectionId);
+    final invigilator = accountById(exam.invigilatorId);
+    return StaticRecord(
+      title: '${exam.examType} - ${course?.code ?? exam.courseId}',
+      subtitle:
+          '${course?.title ?? 'Course'} ${section?.sectionCode ?? ''} - ${exam.room}',
+      meta: '${_date(exam.date)} ${exam.start}-${exam.end}',
+      status: exam.resultPublicationStatus,
+      icon: Icons.assignment_turned_in_outlined,
+      details: {
+        'Exam type': exam.examType,
+        'Course': '${course?.code ?? ''} ${course?.title ?? ''}',
+        'Section': section?.sectionCode ?? exam.sectionId,
+        'Room': exam.room,
+        'Date': _date(exam.date),
+        'Time': '${exam.start} - ${exam.end}',
+        'Invigilator': invigilator?.fullName ?? exam.invigilatorId,
+        'Admit card status': exam.admitCardStatus,
+        'Result submission': exam.resultSubmissionStatus,
+        'Result approval': exam.resultApprovalStatus,
+        'Result publication': exam.resultPublicationStatus,
+        'Supplementary cases': '${exam.supplementaryCases}',
+      },
+    );
+  }
+
+  StaticRecord _forumReportRecord(DemoForumReport report) {
+    final post = forumPosts.firstWhereOrNull(
+      (item) => item.id == report.postId,
+    );
+    final author = accountById(post?.authorId);
+    final reporter = accountById(report.reporterId);
+    final previous = forumReports
+        .where((item) => item.postId == report.postId && item.id != report.id)
+        .length;
+    return StaticRecord(
+      title: report.reason,
+      subtitle: post?.title ?? report.postId,
+      meta:
+          '${reporter?.fullName ?? report.reporterId} - ${_date(report.createdAt)}',
+      status: report.status,
+      icon: Icons.report_outlined,
+      details: {
+        'Reported content': post?.body ?? 'Post not found',
+        'Author': author?.fullName ?? 'Unknown',
+        'Reporter': reporter?.fullName ?? report.reporterId,
+        'Reason': report.reason,
+        'Date': _dateTime(report.createdAt),
+        'Previous reports': '$previous',
+        'Status': report.status,
+        'Available actions':
+            'Dismiss Report, Warn User, Hide Content, Remove Content, Resolve',
+      },
+    );
+  }
+
+  StaticRecord _activityRecord(DemoActivity activity) {
+    final actor = accountById(activity.actorId);
+    return StaticRecord(
+      title: activity.title,
+      subtitle: activity.detail,
+      meta: actor?.fullName ?? 'System',
+      status: _dateTime(activity.createdAt),
+      icon: Icons.history_outlined,
+      details: {
+        'Actor': actor?.fullName ?? activity.actorId,
+        'Action': activity.title,
+        'Target': activity.target ?? 'Local demo record',
+        'Timestamp': _dateTime(activity.createdAt),
+        'Category': activity.category,
+      },
+    );
+  }
+
+  int _sectionEnrollment(String sectionId) {
+    return enrollments
+        .where((enrollment) => enrollment.sectionId == sectionId)
+        .length;
+  }
+
+  String _shortProgramTitle(String title) {
+    if (title.contains('Computer Science')) return 'B.Sc. in CSE';
+    if (title.contains('Electrical')) return 'B.Sc. in EEE';
+    if (title.contains('Civil')) return 'B.Sc. in Civil Engineering';
+    if (title.contains('Business Administration') &&
+        title.startsWith('Bachelor')) {
+      return 'BBA';
+    }
+    if (title.contains('English')) return 'B.A. in English';
+    return title;
+  }
+
+  String _advisorName(String departmentId) {
+    final teacher = teacherAccounts.firstWhereOrNull(
+      (account) => account.departmentId == departmentId,
+    );
+    return teacher?.fullName ?? 'Department chair pending';
+  }
+
+  double _departmentAttendancePercent(String departmentId) {
+    final studentIds = studentAccounts
+        .where((student) => student.departmentId == departmentId)
+        .map((student) => student.id)
+        .toSet();
+    final rows = attendance
+        .where((record) => studentIds.contains(record.studentId))
+        .toList();
+    if (rows.isEmpty) {
+      return 0;
+    }
+    final attended = rows.where((record) {
+      return record.status != DemoAttendanceStatus.absent;
+    }).length;
+    return attended / rows.length * 100;
+  }
+
+  double _departmentCgpa(String departmentId) {
+    final studentIds = studentAccounts
+        .where((student) => student.departmentId == departmentId)
+        .map((student) => student.id)
+        .toSet();
+    final rows = results
+        .where((result) => studentIds.contains(result.studentId))
+        .toList();
+    return _cgpa(rows);
+  }
+
+  String _dateRange(DateTime start, DateTime end) {
+    if (_sameDay(start, end)) {
+      return _date(start);
+    }
+    return '${_date(start)} - ${_date(end)}';
   }
 
   double _cgpa(List<DemoResult> rows) {
@@ -2608,9 +4521,21 @@ class DemoStore extends GetxController {
   void _loadFromSnapshot(JsonMap snapshot) {
     currentAccountId = snapshot['currentAccountId'] as String?;
     accounts = _list(snapshot, 'accounts', DemoAccount.fromJson);
+    offices = _list(snapshot, 'offices', DemoOffice.fromJson);
     departments = _list(snapshot, 'departments', DemoDepartment.fromJson);
+    programs = _list(snapshot, 'programs', DemoProgram.fromJson);
     courses = _list(snapshot, 'courses', DemoCourse.fromJson);
     sections = _list(snapshot, 'sections', DemoSection.fromJson);
+    academicSemesters = _list(
+      snapshot,
+      'academicSemesters',
+      DemoAcademicSemester.fromJson,
+    );
+    calendarEvents = _list(
+      snapshot,
+      'calendarEvents',
+      DemoCalendarEvent.fromJson,
+    );
     enrollments = _list(snapshot, 'enrollments', DemoEnrollment.fromJson);
     schedules = _list(snapshot, 'schedules', DemoScheduleEntry.fromJson);
     attendance = _list(snapshot, 'attendance', DemoAttendanceRecord.fromJson);
@@ -2618,6 +4543,17 @@ class DemoStore extends GetxController {
     submissions = _list(snapshot, 'submissions', DemoSubmission.fromJson);
     quizzes = _list(snapshot, 'quizzes', DemoQuiz.fromJson);
     quizAttempts = _list(snapshot, 'quizAttempts', DemoQuizAttempt.fromJson);
+    examSchedules = _list(snapshot, 'examSchedules', DemoExamSchedule.fromJson);
+    studentRequests = _list(
+      snapshot,
+      'studentRequests',
+      DemoStudentRequest.fromJson,
+    );
+    admissions = _list(
+      snapshot,
+      'admissions',
+      DemoAdmissionApplication.fromJson,
+    );
     notices = _list(snapshot, 'notices', DemoNotice.fromJson);
     events = _list(snapshot, 'events', DemoEvent.fromJson);
     eventRegistrations = _list(
@@ -2630,6 +4566,11 @@ class DemoStore extends GetxController {
       snapshot,
       'clubMemberships',
       DemoClubMembership.fromJson,
+    );
+    lostFoundItems = _list(
+      snapshot,
+      'lostFoundItems',
+      DemoLostFoundItem.fromJson,
     );
     forumCategories = _list(
       snapshot,
@@ -2677,9 +4618,15 @@ class DemoStore extends GetxController {
     return {
       'currentAccountId': currentAccountId,
       'accounts': accounts.map((item) => item.toJson()).toList(),
+      'offices': offices.map((item) => item.toJson()).toList(),
       'departments': departments.map((item) => item.toJson()).toList(),
+      'programs': programs.map((item) => item.toJson()).toList(),
       'courses': courses.map((item) => item.toJson()).toList(),
       'sections': sections.map((item) => item.toJson()).toList(),
+      'academicSemesters': academicSemesters
+          .map((item) => item.toJson())
+          .toList(),
+      'calendarEvents': calendarEvents.map((item) => item.toJson()).toList(),
       'enrollments': enrollments.map((item) => item.toJson()).toList(),
       'schedules': schedules.map((item) => item.toJson()).toList(),
       'attendance': attendance.map((item) => item.toJson()).toList(),
@@ -2687,6 +4634,9 @@ class DemoStore extends GetxController {
       'submissions': submissions.map((item) => item.toJson()).toList(),
       'quizzes': quizzes.map((item) => item.toJson()).toList(),
       'quizAttempts': quizAttempts.map((item) => item.toJson()).toList(),
+      'examSchedules': examSchedules.map((item) => item.toJson()).toList(),
+      'studentRequests': studentRequests.map((item) => item.toJson()).toList(),
+      'admissions': admissions.map((item) => item.toJson()).toList(),
       'notices': notices.map((item) => item.toJson()).toList(),
       'events': events.map((item) => item.toJson()).toList(),
       'eventRegistrations': eventRegistrations
@@ -2694,6 +4644,7 @@ class DemoStore extends GetxController {
           .toList(),
       'clubs': clubs.map((item) => item.toJson()).toList(),
       'clubMemberships': clubMemberships.map((item) => item.toJson()).toList(),
+      'lostFoundItems': lostFoundItems.map((item) => item.toJson()).toList(),
       'forumCategories': forumCategories.map((item) => item.toJson()).toList(),
       'forumPosts': forumPosts.map((item) => item.toJson()).toList(),
       'forumComments': forumComments.map((item) => item.toJson()).toList(),

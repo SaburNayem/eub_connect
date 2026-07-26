@@ -145,13 +145,30 @@ class HomeController extends GetxController {
             : AppRoutes.studentManagement;
       case 'Teacher Portal':
         return AppRoutes.teacherDashboard;
-      case 'Faculty Portal':
-      case 'Administration Panel':
+      case 'Administration Portal':
         return AppRoutes.adminFaculty;
+      case 'Admin Dashboard':
+        return null;
       case 'Departments':
         return AppRoutes.departments;
       case 'Department Management':
         return AppRoutes.departmentManagement;
+      case 'Programs':
+      case 'Courses':
+      case 'Sections':
+      case 'Administration Staff':
+      case 'Admissions':
+      case 'Examinations':
+      case 'Student Requests':
+      case 'Invoices':
+      case 'Payments':
+      case 'Scholarships/Waivers':
+      case 'Support Tickets':
+      case 'Complaints/Cases':
+      case 'Community Moderation':
+      case 'Clubs':
+      case 'Activity Log':
+        return null;
       case 'Teacher Management':
         return AppRoutes.teacherManagement;
       case 'Student Management':
@@ -298,6 +315,11 @@ class HomeScreen extends StatelessWidget {
           final dashboardFeatures = isWide
               ? accessibleFeatures
               : selectedMobileFeatures;
+          final showOperationsDashboard =
+              isWide ||
+              ((activeRole == PortalRole.admin ||
+                      activeRole == PortalRole.administration) &&
+                  selectedMobileGroupIndex == 0);
 
           return Scaffold(
             key: _scaffoldKey,
@@ -405,15 +427,17 @@ class HomeScreen extends StatelessWidget {
                                 if (!isWide)
                                   _MobileAccountStrip(account: account),
                                 if (!isWide) const SizedBox(height: 16),
-                                if (isWide)
+                                if (showOperationsDashboard)
                                   _DashboardView(
                                     key: ValueKey(activeRole),
                                     profile: dashboardProfile,
                                     accessibleFeatures: dashboardFeatures,
                                     metricsState: dashboardMetricState,
-                                    featureTitle: 'Role Features',
+                                    featureTitle: isWide
+                                        ? 'Role Features'
+                                        : '${selectedMobileGroup.title} Actions',
                                     featureSubtitle:
-                                        '${accessibleFeatures.length} features available for ${dashboardProfile.role.label.toLowerCase()} access',
+                                        '${dashboardFeatures.length} features available for ${dashboardProfile.role.label.toLowerCase()} access',
                                     onFeatureTap: _controller.jumpToFeature,
                                   )
                                 else
@@ -1055,6 +1079,15 @@ class _DashboardView extends StatelessWidget {
           state: metricsState,
           accent: profile.role.color,
         ),
+        if (profile.role == PortalRole.admin ||
+            profile.role == PortalRole.administration) ...[
+          const SizedBox(height: 18),
+          _OperationsDashboardSections(
+            role: profile.role,
+            accent: profile.role.color,
+            onFeatureTap: onFeatureTap,
+          ),
+        ],
         const SizedBox(height: 18),
         _SectionHeader(title: featureTitle, subtitle: featureSubtitle),
         const SizedBox(height: 10),
@@ -1062,6 +1095,320 @@ class _DashboardView extends StatelessWidget {
           features: accessibleFeatures,
           onFeatureTap: onFeatureTap,
         ),
+      ],
+    );
+  }
+}
+
+class _OperationsDashboardSections extends StatelessWidget {
+  const _OperationsDashboardSections({
+    required this.role,
+    required this.accent,
+    required this.onFeatureTap,
+  });
+
+  final PortalRole role;
+  final Color accent;
+  final ValueChanged<String> onFeatureTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = DemoStore.instance;
+    if (role == PortalRole.administration) {
+      final officeFeature = store.hydrateFeature(
+        moduleFeature(title: 'Administration Portal'),
+        role,
+      );
+      final requestFeature = store.hydrateFeature(
+        moduleFeature(title: 'Student Requests'),
+        role,
+      );
+      final supportFeature = store.hydrateFeature(
+        moduleFeature(title: 'Support Tickets'),
+        role,
+      );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DashboardQuickActions(
+            actions: const [
+              'Student Requests',
+              'Support Tickets',
+              'Notice Board',
+              'Examinations',
+              'Payments',
+            ],
+            accent: accent,
+            onFeatureTap: onFeatureTap,
+          ),
+          const SizedBox(height: 18),
+          _DashboardSectionPanel(
+            title: 'Office Workflow',
+            subtitle:
+                'Requests, support, and documents assigned to the current office',
+            metrics: officeFeature.metrics.take(6).toList(),
+            records: officeFeature.records.take(8).toList(),
+            accent: accent,
+          ),
+          const SizedBox(height: 18),
+          _DashboardSectionPanel(
+            title: 'Student Requests',
+            subtitle: 'Office-scoped document and service requests',
+            metrics: requestFeature.metrics,
+            records: requestFeature.records.take(6).toList(),
+            accent: accent,
+          ),
+          const SizedBox(height: 18),
+          _DashboardSectionPanel(
+            title: 'Support Cases',
+            subtitle: 'Tickets routed to this office',
+            metrics: supportFeature.metrics,
+            records: supportFeature.records.take(6).toList(),
+            accent: accent,
+          ),
+        ],
+      );
+    }
+
+    final adminFeature = store.hydrateFeature(
+      moduleFeature(title: 'Admin Dashboard'),
+      role,
+    );
+    final admissionFeature = store.hydrateFeature(
+      moduleFeature(title: 'Admissions'),
+      role,
+    );
+    final examFeature = store.hydrateFeature(
+      moduleFeature(title: 'Examinations'),
+      role,
+    );
+    final financeFeature = store.hydrateFeature(
+      moduleFeature(title: 'Invoices'),
+      role,
+    );
+    final paymentFeature = store.hydrateFeature(
+      moduleFeature(title: 'Payments'),
+      role,
+    );
+    final requestFeature = store.hydrateFeature(
+      moduleFeature(title: 'Student Requests'),
+      role,
+    );
+    final departmentFeature = store.hydrateFeature(
+      moduleFeature(title: 'Department Management'),
+      role,
+    );
+
+    final academicMetrics = [
+      StaticMetric(
+        label: 'Classes Today',
+        value: '${store.todayScheduleCount()}',
+        note: 'Routine entries',
+        icon: Icons.today_outlined,
+      ),
+      StaticMetric(
+        label: 'Avg Attendance',
+        value: '${store.averageAttendancePercent().round()}%',
+        note: 'Attendance rows',
+        icon: Icons.query_stats_outlined,
+      ),
+      StaticMetric(
+        label: 'Assignments Active',
+        value:
+            '${store.assignments.where((assignment) => assignment.status == 'published').length}',
+        note: 'Published tasks',
+        icon: Icons.assignment_outlined,
+      ),
+      StaticMetric(
+        label: 'Pending Grading',
+        value:
+            '${store.submissions.where((submission) => submission.status != 'graded').length}',
+        note: 'Submissions',
+        icon: Icons.rate_review_outlined,
+      ),
+      StaticMetric(
+        label: 'Active Quizzes',
+        value:
+            '${store.quizzes.where((quiz) => quiz.status == 'published').length}',
+        note: 'Published quizzes',
+        icon: Icons.quiz_outlined,
+      ),
+      StaticMetric(
+        label: 'Courses With Problems',
+        value:
+            '${store.sections.where((section) => store.enrollments.where((enrollment) => enrollment.sectionId == section.id).length > section.capacity).length}',
+        note: 'Over capacity',
+        icon: Icons.warning_amber_outlined,
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _DashboardQuickActions(
+          actions: const [
+            'Student Management',
+            'Teacher Management',
+            'Administration Staff',
+            'Notice Board',
+            'Events',
+            'Student Requests',
+            'Community Moderation',
+            'Payments',
+          ],
+          accent: accent,
+          onFeatureTap: onFeatureTap,
+        ),
+        const SizedBox(height: 18),
+        _DashboardSectionPanel(
+          title: 'Needs Attention',
+          subtitle:
+              'Calculated from overdue invoices, low attendance, grading, support, reports, results, and capacity',
+          metrics: adminFeature.metrics.skip(8).take(4).toList(),
+          records: store.needsAttentionRecords(),
+          accent: accent,
+        ),
+        const SizedBox(height: 18),
+        _DashboardSectionPanel(
+          title: 'Academic Operations',
+          subtitle:
+              'Classes, attendance, active assignments, grading, quizzes, and capacity',
+          metrics: academicMetrics,
+          records: departmentFeature.records.take(6).toList(),
+          accent: const Color(0xFF2A2D7E),
+        ),
+        const SizedBox(height: 18),
+        _DashboardSectionPanel(
+          title: 'Finance Overview',
+          subtitle:
+              'Billed, collected, outstanding, overdue, verification, transactions, and ledgers',
+          metrics: [
+            ...financeFeature.metrics,
+            ...paymentFeature.metrics.take(2),
+          ],
+          records: [
+            ...paymentFeature.records.take(4),
+            ...financeFeature.records.take(4),
+          ],
+          accent: const Color(0xFFCA8A04),
+        ),
+        const SizedBox(height: 18),
+        _DashboardSectionPanel(
+          title: 'Admission Overview',
+          subtitle:
+              'Application -> document review -> eligible -> approved -> payment -> registered',
+          metrics: admissionFeature.metrics,
+          records: admissionFeature.records.take(8).toList(),
+          accent: const Color(0xFF0F766E),
+        ),
+        const SizedBox(height: 18),
+        _DashboardSectionPanel(
+          title: 'Examination Overview',
+          subtitle:
+              'Schedules, admit cards, result submission, approval, publication, and supplementary cases',
+          metrics: examFeature.metrics,
+          records: examFeature.records.take(8).toList(),
+          accent: const Color(0xFF7C3AED),
+        ),
+        const SizedBox(height: 18),
+        _DashboardSectionPanel(
+          title: 'Student Services',
+          subtitle:
+              'Support tickets, document requests, registration issues, complaints, events, and clubs',
+          metrics: requestFeature.metrics,
+          records: requestFeature.records.take(8).toList(),
+          accent: const Color(0xFF007F3D),
+        ),
+        const SizedBox(height: 18),
+        _DashboardSectionPanel(
+          title: 'Administration Offices',
+          subtitle:
+              'Office heads, staff count, open tasks, pending requests, and status',
+          metrics: const [],
+          records: store.administrationOfficeRecords(),
+          accent: const Color(0xFF0F766E),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardQuickActions extends StatelessWidget {
+  const _DashboardQuickActions({
+    required this.actions,
+    required this.accent,
+    required this.onFeatureTap,
+  });
+
+  final List<String> actions;
+  final Color accent;
+  final ValueChanged<String> onFeatureTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionHeader(
+          title: 'Quick Actions',
+          subtitle: 'Open the local workflow pages and dialogs used most often',
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final action in actions)
+              OutlinedButton.icon(
+                onPressed: () => onFeatureTap(action),
+                icon: Icon(moduleFallbackIcon(action), size: 18),
+                label: Text(action),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: accent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardSectionPanel extends StatelessWidget {
+  const _DashboardSectionPanel({
+    required this.title,
+    required this.subtitle,
+    required this.metrics,
+    required this.records,
+    required this.accent,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<StaticMetric> metrics;
+  final List<StaticRecord> records;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionHeader(title: title, subtitle: subtitle),
+        if (metrics.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _MetricGrid(metrics: metrics, accent: accent),
+        ],
+        if (records.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          for (final record in records.take(10)) ...[
+            _FeatureRecordTile(record: record, accent: accent),
+            const SizedBox(height: 10),
+          ],
+        ],
       ],
     );
   }
@@ -1289,6 +1636,38 @@ class _FeatureActionBar extends StatelessWidget {
     }
     if (action == 'Publish course notice') {
       await _showNoticeForm(context);
+      return;
+    }
+    if (action == 'Create notice') {
+      await _showNoticeForm(context);
+      return;
+    }
+    if (action == 'Create event') {
+      await _showEventForm(context);
+      return;
+    }
+    if (action == 'Add Student') {
+      await _showStudentForm(context);
+      return;
+    }
+    if (action == 'Add Teacher') {
+      await _showTeacherForm(context);
+      return;
+    }
+    if (action == 'Add Administration Staff') {
+      await _showAdministrationStaffForm(context);
+      return;
+    }
+    if (action == 'Create student request') {
+      await _showStudentRequestForm(context);
+      return;
+    }
+    if (action == 'Report lost item') {
+      await _showLostFoundForm(context, type: 'Lost');
+      return;
+    }
+    if (action == 'Report found item') {
+      await _showLostFoundForm(context, type: 'Found');
       return;
     }
 
@@ -1679,8 +2058,8 @@ class _FeatureActionBar extends StatelessWidget {
                               child: Text('Teachers'),
                             ),
                             DropdownMenuItem(
-                              value: 'faculty',
-                              child: Text('Faculty'),
+                              value: 'administration',
+                              child: Text('Administration'),
                             ),
                           ],
                           onChanged: (value) {
@@ -1785,6 +2164,619 @@ class _FeatureActionBar extends StatelessWidget {
     bodyController.dispose();
   }
 
+  Future<void> _showEventForm(BuildContext context) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final venueController = TextEditingController(text: 'Auditorium');
+    final organizerController = TextEditingController(
+      text: 'EUB Connect Office',
+    );
+    final timeController = TextEditingController(text: '10:30 AM');
+    final capacityController = TextEditingController(text: '120');
+    var audience = 'All';
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Create Event'),
+              content: SizedBox(
+                width: 540,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: titleController,
+                          decoration: const InputDecoration(labelText: 'Title'),
+                          validator: _minValidator(6),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: descriptionController,
+                          minLines: 3,
+                          maxLines: 5,
+                          decoration: const InputDecoration(
+                            labelText: 'Description',
+                            alignLabelWithHint: true,
+                          ),
+                          validator: _minValidator(20),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: venueController,
+                          decoration: const InputDecoration(labelText: 'Venue'),
+                          validator: _minValidator(3),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: organizerController,
+                          decoration: const InputDecoration(
+                            labelText: 'Organizer',
+                          ),
+                          validator: _minValidator(3),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: timeController,
+                          decoration: const InputDecoration(labelText: 'Time'),
+                          validator: _minValidator(4),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: capacityController,
+                          decoration: const InputDecoration(
+                            labelText: 'Capacity',
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            final parsed = int.tryParse(value ?? '');
+                            if (parsed == null || parsed < 1) {
+                              return 'Enter a valid capacity';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          initialValue: audience,
+                          decoration: const InputDecoration(
+                            labelText: 'Audience',
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'All', child: Text('All')),
+                            DropdownMenuItem(
+                              value: 'Student',
+                              child: Text('Students'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Teacher',
+                              child: Text('Teachers'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Administration',
+                              child: Text('Administration'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => audience = value);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton.icon(
+                  onPressed: () {
+                    if (formKey.currentState?.validate() != true) return;
+                    store.createEventRecord(
+                      title: titleController.text,
+                      description: descriptionController.text,
+                      date: DateTime.now().add(const Duration(days: 10)),
+                      time: timeController.text,
+                      venue: venueController.text,
+                      capacity: int.parse(capacityController.text),
+                      organizer: organizerController.text,
+                      audience: audience,
+                    );
+                    Navigator.of(dialogContext).pop();
+                    _showSuccess('Event created');
+                  },
+                  icon: const Icon(Icons.event_outlined),
+                  label: const Text('Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    titleController.dispose();
+    descriptionController.dispose();
+    venueController.dispose();
+    organizerController.dispose();
+    timeController.dispose();
+    capacityController.dispose();
+  }
+
+  Future<void> _showStudentForm(BuildContext context) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final phoneController = TextEditingController(text: '+88017');
+    var departmentId = store.departments.first.id;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Add Student'),
+            content: SizedBox(
+              width: 500,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                      validator: _minValidator(3),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      validator: _minValidator(6),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: phoneController,
+                      decoration: const InputDecoration(labelText: 'Phone'),
+                      validator: _minValidator(8),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: departmentId,
+                      decoration: const InputDecoration(
+                        labelText: 'Department',
+                      ),
+                      items: [
+                        for (final department in store.departments)
+                          DropdownMenuItem(
+                            value: department.id,
+                            child: Text(department.shortName),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) setState(() => departmentId = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (formKey.currentState?.validate() != true) return;
+                  store.addStudentAccount(
+                    fullName: nameController.text,
+                    email: emailController.text,
+                    phone: phoneController.text,
+                    departmentId: departmentId,
+                  );
+                  Navigator.of(dialogContext).pop();
+                  _showSuccess('Student added');
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    nameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+  }
+
+  Future<void> _showTeacherForm(BuildContext context) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final designationController = TextEditingController(text: 'Lecturer');
+    var departmentId = store.departments.first.id;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Add Teacher'),
+            content: SizedBox(
+              width: 500,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                      validator: _minValidator(3),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      validator: _minValidator(6),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: designationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Designation',
+                      ),
+                      validator: _minValidator(3),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: departmentId,
+                      decoration: const InputDecoration(
+                        labelText: 'Department',
+                      ),
+                      items: [
+                        for (final department in store.departments)
+                          DropdownMenuItem(
+                            value: department.id,
+                            child: Text(department.shortName),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) setState(() => departmentId = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (formKey.currentState?.validate() != true) return;
+                  store.addTeacherAccount(
+                    fullName: nameController.text,
+                    email: emailController.text,
+                    designation: designationController.text,
+                    departmentId: departmentId,
+                  );
+                  Navigator.of(dialogContext).pop();
+                  _showSuccess('Teacher added');
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    nameController.dispose();
+    emailController.dispose();
+    designationController.dispose();
+  }
+
+  Future<void> _showAdministrationStaffForm(BuildContext context) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final designationController = TextEditingController(text: 'Office Officer');
+    var officeId = store.offices.first.id;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Add Administration Staff'),
+            content: SizedBox(
+              width: 500,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                      validator: _minValidator(3),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      validator: _minValidator(6),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: designationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Designation',
+                      ),
+                      validator: _minValidator(3),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: officeId,
+                      decoration: const InputDecoration(labelText: 'Office'),
+                      items: [
+                        for (final office in store.offices)
+                          DropdownMenuItem(
+                            value: office.id,
+                            child: Text(office.shortName),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) setState(() => officeId = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (formKey.currentState?.validate() != true) return;
+                  store.addAdministrationStaff(
+                    fullName: nameController.text,
+                    email: emailController.text,
+                    designation: designationController.text,
+                    officeId: officeId,
+                  );
+                  Navigator.of(dialogContext).pop();
+                  _showSuccess('Administration staff added');
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    nameController.dispose();
+    emailController.dispose();
+    designationController.dispose();
+  }
+
+  Future<void> _showStudentRequestForm(BuildContext context) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final notesController = TextEditingController();
+    var type = 'Transcript';
+    var priority = 'Normal';
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Create Student Request'),
+            content: SizedBox(
+              width: 500,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: type,
+                      decoration: const InputDecoration(labelText: 'Type'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Transcript',
+                          child: Text('Transcript'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Provisional Certificate',
+                          child: Text('Provisional Certificate'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Course registration issue',
+                          child: Text('Course registration issue'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Payment correction',
+                          child: Text('Payment correction'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Result correction',
+                          child: Text('Result correction'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) setState(() => type = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: priority,
+                      decoration: const InputDecoration(labelText: 'Priority'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Normal',
+                          child: Text('Normal'),
+                        ),
+                        DropdownMenuItem(value: 'High', child: Text('High')),
+                        DropdownMenuItem(
+                          value: 'Urgent',
+                          child: Text('Urgent'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) setState(() => priority = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: notesController,
+                      minLines: 4,
+                      maxLines: 6,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes',
+                        alignLabelWithHint: true,
+                      ),
+                      validator: _minValidator(12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (formKey.currentState?.validate() != true) return;
+                  store.createStudentRequest(
+                    type: type,
+                    notes: notesController.text,
+                    priority: priority,
+                  );
+                  Navigator.of(dialogContext).pop();
+                  _showSuccess('Student request created');
+                },
+                child: const Text('Submit'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    notesController.dispose();
+  }
+
+  Future<void> _showLostFoundForm(
+    BuildContext context, {
+    required String type,
+  }) async {
+    final store = DemoStore.instance;
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final locationController = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Report $type Item'),
+        content: SizedBox(
+          width: 500,
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Item'),
+                  validator: _minValidator(4),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: locationController,
+                  decoration: const InputDecoration(labelText: 'Location'),
+                  validator: _minValidator(3),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: descriptionController,
+                  minLines: 3,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    alignLabelWithHint: true,
+                  ),
+                  validator: _minValidator(12),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() != true) return;
+              store.reportLostFoundItem(
+                type: type,
+                title: titleController.text,
+                description: descriptionController.text,
+                location: locationController.text,
+              );
+              Navigator.of(dialogContext).pop();
+              _showSuccess('$type item reported');
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+
+    titleController.dispose();
+    descriptionController.dispose();
+    locationController.dispose();
+  }
+
+  FormFieldValidator<String> _minValidator(int minLength) {
+    return (value) {
+      final text = value?.trim() ?? '';
+      if (text.length < minLength) {
+        return 'Enter at least $minLength characters';
+      }
+      return null;
+    };
+  }
+
   Future<void> _showSingleTextForm({
     required BuildContext context,
     required String title,
@@ -1867,6 +2859,16 @@ class _FeatureActionBar extends StatelessWidget {
     if (action.contains('support') || action.contains('ticket')) {
       return Icons.support_agent_outlined;
     }
+    if (action.contains('Student')) return Icons.person_add_alt_outlined;
+    if (action.contains('Teacher')) return Icons.co_present_outlined;
+    if (action.contains('Administration')) return Icons.badge_outlined;
+    if (action.contains('course')) return Icons.menu_book_outlined;
+    if (action.contains('section')) return Icons.class_outlined;
+    if (action.contains('request')) return Icons.request_page_outlined;
+    if (action.contains('result')) return Icons.publish_outlined;
+    if (action.contains('lost') || action.contains('found')) {
+      return Icons.search_outlined;
+    }
     if (action.contains('forum') || action.contains('post')) {
       return Icons.forum_outlined;
     }
@@ -1878,13 +2880,66 @@ class _FeatureActionBar extends StatelessWidget {
   }
 }
 
-class _FeatureRecordList extends StatelessWidget {
+class _FeatureRecordList extends StatefulWidget {
   const _FeatureRecordList({required this.feature});
 
   final StaticFeature feature;
 
   @override
+  State<_FeatureRecordList> createState() => _FeatureRecordListState();
+}
+
+class _FeatureRecordListState extends State<_FeatureRecordList> {
+  final TextEditingController _queryController = TextEditingController();
+  String _query = '';
+  String _status = 'All';
+  String _sort = 'Title';
+
+  @override
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
+  }
+
+  List<StaticRecord> get _filteredRecords {
+    final normalizedQuery = _query.trim().toLowerCase();
+    final records = widget.feature.records.where((record) {
+      final queryMatch =
+          normalizedQuery.isEmpty ||
+          record.title.toLowerCase().contains(normalizedQuery) ||
+          record.subtitle.toLowerCase().contains(normalizedQuery) ||
+          record.meta.toLowerCase().contains(normalizedQuery) ||
+          record.status.toLowerCase().contains(normalizedQuery) ||
+          record.details.values.any(
+            (value) => value.toLowerCase().contains(normalizedQuery),
+          );
+      final statusMatch = _status == 'All' || record.status == _status;
+      return queryMatch && statusMatch;
+    }).toList();
+    records.sort((a, b) {
+      switch (_sort) {
+        case 'Status':
+          return a.status.compareTo(b.status);
+        case 'Meta':
+          return a.meta.compareTo(b.meta);
+        case 'Title':
+        default:
+          return a.title.compareTo(b.title);
+      }
+    });
+    return records;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final records = _filteredRecords;
+    final statuses = {
+      'All',
+      ...widget.feature.records
+          .map((record) => record.status)
+          .where((status) => status.trim().isNotEmpty),
+    }.toList();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1896,89 +2951,286 @@ class _FeatureRecordList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SectionHeader(
-            title: feature.title,
-            subtitle: '${feature.records.length} calculated demo records',
+            title: widget.feature.title,
+            subtitle:
+                '${records.length} of ${widget.feature.records.length} calculated demo records',
           ),
           const SizedBox(height: 12),
-          for (final record in feature.records) ...[
-            _FeatureRecordTile(record: record, accent: feature.accent),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 760;
+              final searchControl = TextField(
+                controller: _queryController,
+                onChanged: (value) => setState(() => _query = value),
+                decoration: const InputDecoration(
+                  hintText: 'Search records',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              );
+              final controls = [
+                if (compact)
+                  searchControl
+                else
+                  Expanded(flex: 2, child: searchControl),
+                SizedBox(
+                  width: compact ? double.infinity : 210,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _status,
+                    decoration: const InputDecoration(labelText: 'Status'),
+                    items: [
+                      for (final status in statuses)
+                        DropdownMenuItem(value: status, child: Text(status)),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => _status = value);
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: compact ? double.infinity : 180,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _sort,
+                    decoration: const InputDecoration(labelText: 'Sort'),
+                    items: const [
+                      DropdownMenuItem(value: 'Title', child: Text('Title')),
+                      DropdownMenuItem(value: 'Status', child: Text('Status')),
+                      DropdownMenuItem(value: 'Meta', child: Text('Meta')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => _sort = value);
+                    },
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    _queryController.clear();
+                    setState(() {
+                      _query = '';
+                      _status = 'All';
+                      _sort = 'Title';
+                    });
+                  },
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Clear'),
+                ),
+              ];
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final control in controls) ...[
+                      control,
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var index = 0; index < controls.length; index++) ...[
+                    controls[index],
+                    if (index != controls.length - 1) const SizedBox(width: 10),
+                  ],
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          if (records.isEmpty)
+            EmptyStatePanel(
+              title: 'No matching records',
+              message: 'Clear filters or search another term.',
+              icon: widget.feature.icon,
+            ),
+          for (final record in records) ...[
+            _FeatureRecordTile(
+              record: record,
+              accent: widget.feature.accent,
+              onTap: () => _showRecordDetails(context, record),
+            ),
             const SizedBox(height: 10),
           ],
         ],
       ),
     );
   }
+
+  void _showRecordDetails(BuildContext context, StaticRecord record) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return _RecordDetailDialog(
+          record: record,
+          accent: widget.feature.accent,
+        );
+      },
+    );
+  }
 }
 
 class _FeatureRecordTile extends StatelessWidget {
-  const _FeatureRecordTile({required this.record, required this.accent});
+  const _FeatureRecordTile({
+    required this.record,
+    required this.accent,
+    this.onTap,
+  });
+
+  final StaticRecord record;
+  final Color accent;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE3E6EA)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(record.icon, color: accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      record.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textDark,
+                        fontWeight: FontWeight.w900,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      record.subtitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF667085),
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        _StatusPill(label: record.meta, color: accent),
+                        _StatusPill(
+                          label: record.status,
+                          color: const Color(0xFF475467),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null)
+                const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(Icons.chevron_right, color: Color(0xFF98A2B3)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecordDetailDialog extends StatelessWidget {
+  const _RecordDetailDialog({required this.record, required this.accent});
 
   final StaticRecord record;
   final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE3E6EA)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(record.icon, color: accent, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    final details = record.details.isEmpty
+        ? {
+            'Title': record.title,
+            'Summary': record.subtitle,
+            'Meta': record.meta,
+            'Status': record.status,
+          }
+        : record.details;
+
+    return AlertDialog(
+      title: Text(record.title),
+      content: SizedBox(
+        width: 640,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                record.subtitle,
+                style: const TextStyle(color: Color(0xFF667085), height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _StatusPill(label: record.meta, color: accent),
+                  _StatusPill(
+                    label: record.status,
+                    color: const Color(0xFF475467),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              for (final entry in details.entries) ...[
                 Text(
-                  record.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  entry.key,
                   style: const TextStyle(
                     color: AppColors.textDark,
                     fontWeight: FontWeight.w900,
-                    height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
-                  record.subtitle,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                  entry.value.isEmpty ? '-' : entry.value,
                   style: const TextStyle(
                     color: Color(0xFF667085),
                     height: 1.35,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    _StatusPill(label: record.meta, color: accent),
-                    _StatusPill(
-                      label: record.status,
-                      color: const Color(0xFF475467),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 12),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
     );
   }
 }
@@ -2834,55 +4086,54 @@ List<_NavigationGroup> _navigationGroupsForRole(PortalRole role) {
           ],
         ),
       ];
-    case PortalRole.faculty:
+    case PortalRole.administration:
       return const [
         _NavigationGroup(
-          title: 'Management',
-          description: 'Departments, teachers, students',
+          title: 'Office',
+          description: 'Dashboard and assigned office work',
           icon: Icons.business_center_outlined,
           color: Color(0xFF0F766E),
           featureTitles: [
-            'Faculty Portal',
-            'Departments',
-            'Department Management',
-            'Teacher Management',
-            'Student Management',
-          ],
-        ),
-        _NavigationGroup(
-          title: 'Teaching',
-          description: 'Teacher tools and academic reports',
-          icon: Icons.co_present_outlined,
-          color: Color(0xFF8B5E00),
-          featureTitles: [
-            'Teacher Portal',
-            'Student Notices',
-            'Lecture Materials',
-            'Academic Report',
-            'Marks Result',
+            'Administration Portal',
+            'Student Requests',
+            'Support Tickets',
+            'Notice Board',
           ],
         ),
         _NavigationGroup(
           title: 'Academic',
-          description: 'Calendar, routine, reports',
+          description: 'Departments, programs, courses',
           icon: Icons.calendar_month_outlined,
           color: Color(0xFF2A2D7E),
           featureTitles: [
+            'Departments',
+            'Department Management',
+            'Programs',
+            'Courses',
+            'Sections',
             'Academic Calendar',
             'Routine Management',
-            'Semester Courses',
-            'Assignments',
-            'Attendance',
-            'Quiz System',
-            'Results',
+            'Examinations',
           ],
         ),
         _NavigationGroup(
           title: 'Finance',
-          description: 'Receipts and payment history',
+          description: 'Invoices, payments, waivers',
           icon: Icons.account_balance_wallet_outlined,
           color: Color(0xFFCA8A04),
-          featureTitles: ['Payment History'],
+          featureTitles: [
+            'Invoices',
+            'Payments',
+            'Scholarships/Waivers',
+            'Payment History',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Admissions',
+          description: 'Applicants and registration progress',
+          icon: Icons.how_to_reg_outlined,
+          color: Color(0xFF0F766E),
+          featureTitles: ['Admissions', 'Student Management'],
         ),
         _NavigationGroup(
           title: 'Campus',
@@ -2894,6 +4145,7 @@ List<_NavigationGroup> _navigationGroupsForRole(PortalRole role) {
             'Notice Board',
             'Lost and Found',
             'Student Support',
+            'Complaints/Cases',
           ],
         ),
         _NavigationGroup(
@@ -2919,47 +4171,60 @@ List<_NavigationGroup> _navigationGroupsForRole(PortalRole role) {
     case PortalRole.admin:
       return const [
         _NavigationGroup(
-          title: 'Admin',
-          description: 'Roles, audit, system',
+          title: 'Dashboard',
+          description: 'University command center',
           icon: Icons.admin_panel_settings_outlined,
           color: Color(0xFFB42318),
           featureTitles: [
-            'Authentication',
-            'Administration Panel',
-            'User Roles',
-            'System Activity',
-            'Settings',
+            'Admin Dashboard',
+            'Student Requests',
+            'Support Tickets',
+            'Activity Log',
           ],
         ),
         _NavigationGroup(
-          title: 'Portals',
-          description: 'Student, teacher, faculty spaces',
-          icon: Icons.dashboard_customize_outlined,
-          color: Color(0xFF0F766E),
-          featureTitles: ['Student Portal', 'Teacher Portal', 'Faculty Portal'],
-        ),
-        _NavigationGroup(
           title: 'Academic',
-          description: 'Departments, routine, results',
+          description: 'Departments, programs, courses',
           icon: Icons.account_tree_outlined,
           color: Color(0xFF2A2D7E),
           featureTitles: [
             'Departments',
             'Department Management',
-            'Teacher Management',
-            'Student Management',
+            'Programs',
+            'Courses',
+            'Sections',
             'Academic Calendar',
             'Routine Management',
-            'Class Routine',
             'Semester Courses',
             'Assignments',
             'Attendance',
-            'Student Notices',
-            'Lecture Materials',
-            'Academic Report',
-            'Marks Result',
             'Quiz System',
             'Results',
+            'Examinations',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'People',
+          description: 'Students, teachers, offices',
+          icon: Icons.groups_outlined,
+          color: Color(0xFF0F766E),
+          featureTitles: [
+            'Student Management',
+            'Teacher Management',
+            'Administration Staff',
+            'User Roles',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'Operations',
+          description: 'Admissions, exams, requests',
+          icon: Icons.fact_check_outlined,
+          color: Color(0xFF7C3AED),
+          featureTitles: [
+            'Admissions',
+            'Examinations',
+            'Student Requests',
+            'Attendance',
           ],
         ),
         _NavigationGroup(
@@ -2967,7 +4232,14 @@ List<_NavigationGroup> _navigationGroupsForRole(PortalRole role) {
           description: 'Fees, receipts, scholarships',
           icon: Icons.account_balance_wallet_outlined,
           color: Color(0xFFCA8A04),
-          featureTitles: ['Tuition Fees', 'Payment History', 'Scholarships'],
+          featureTitles: [
+            'Invoices',
+            'Payments',
+            'Scholarships/Waivers',
+            'Tuition Fees',
+            'Payment History',
+            'Scholarships',
+          ],
         ),
         _NavigationGroup(
           title: 'Campus',
@@ -2979,14 +4251,33 @@ List<_NavigationGroup> _navigationGroupsForRole(PortalRole role) {
             'Notice Board',
             'Lost and Found',
             'Student Support',
+            'Complaints/Cases',
           ],
         ),
         _NavigationGroup(
-          title: 'Connect',
-          description: 'Clubs and discussions',
+          title: 'Engagement',
+          description: 'Clubs, community, moderation',
           icon: Icons.groups_2_outlined,
           color: Color(0xFF0D9488),
-          featureTitles: ['Community Forum', 'Discussion Board'],
+          featureTitles: [
+            'Community Forum',
+            'Discussion Board',
+            'Clubs',
+            'Community Moderation',
+          ],
+        ),
+        _NavigationGroup(
+          title: 'System',
+          description: 'Audit, settings, reset',
+          icon: Icons.settings_outlined,
+          color: Color(0xFF475569),
+          featureTitles: [
+            'Activity Log',
+            'System Activity',
+            'Notifications',
+            'Settings',
+            'Authentication',
+          ],
         ),
         _NavigationGroup(
           title: 'Account',
